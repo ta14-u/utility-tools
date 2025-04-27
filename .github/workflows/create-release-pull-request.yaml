@@ -13,7 +13,7 @@ jobs:
       - uses: ruby/setup-ruby@v1
         with:
           ruby-version: 3.1
-      - run: gem install --no-document git-pr-release
+      - run: gem install --no-document git-pr-release faraday-retry
       - run: git-pr-release
         env:
           GIT_PR_RELEASE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
