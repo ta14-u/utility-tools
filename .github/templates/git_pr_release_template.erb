@@ -1,0 +1,9 @@
+Release
+
+## リリース対象 PR
+<% pull_requests.each do |pr| -%>
+ - <%= pr.html_link %> <%= pr.mention %>
+<% end -%>
+
+- [ ] マージボタンが 「Merge pull request」になっている
+  - `develop` => `main` のマージはスカッシュマージではなくマージコミットを使用すること
