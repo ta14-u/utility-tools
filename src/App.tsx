@@ -1,7 +1,7 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { Route, BrowserRouter as Router, Routes } from "react-router-dom";
 import "./App.css";
-import Home from './pages/Home';
-import QRCodeGenerator from './pages/QRCodeGenerator';
+import Home from "./pages/Home";
+import QRCodeGenerator from "./pages/QRCodeGenerator";
 
 function App() {
   return (
@@ -9,7 +9,7 @@ function App() {
       <div className="app-container">
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/qr-generator" element={<QRCodeGenerator />} />
+          <Route path="/qr-code-generator" element={<QRCodeGenerator />} />
         </Routes>
       </div>
     </Router>

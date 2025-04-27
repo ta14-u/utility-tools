@@ -8,7 +8,7 @@ const Home = () => {
         <div className="tool-card">
           <h2>QR Code Generator</h2>
           <p>Generate QR codes from text input</p>
-          <Link to="/qr-generator" className="tool-link">
+          <Link to="/qr-code-generator" className="tool-link">
             Open QR Generator
           </Link>
         </div>
