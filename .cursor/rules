@@ -10,7 +10,7 @@ GitHub Pagesで公開されているため、パス設定に注意が必要。
 - **ビルドツール**: Vite
 - **パッケージマネージャー**: pnpm
 - **ルーティング**: React Router DOM 6.30.0
-- **Linter/Formatter**: Biome 1.9.4 + ESLint
+- **Linter/Formatter**: Biome 2.3.2
 
 ## コーディング規約
 
@@ -26,7 +26,7 @@ GitHub Pagesで公開されているため、パス設定に注意が必要。
 - コンポーネントは関数コンポーネントとして記述
 
 ### インポート順序
-- Biome の `organizeImports` が有効なため、自動フォーマットに任せる
+- Biome で自動的にインポートが整理されるため、手動での並び替えは不要
 
 ### ルーティング
 - `basename="/utility-tools"` が設定されているため、GitHub Pages用のパスを考慮
