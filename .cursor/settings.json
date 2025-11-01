@@ -1,0 +1,29 @@
+{
+  "// プロジェクト固有のCursor設定": "このファイルはこのプロジェクト専用の設定を保持します",
+  "projectName": "utility-tools",
+  "packageManager": "pnpm",
+  "buildTool": "vite",
+  "framework": "react",
+  "typescript": {
+    "strict": true,
+    "version": "~5.7.2"
+  },
+  "linter": {
+    "primary": "biome",
+    "secondary": "eslint"
+  },
+  "paths": {
+    "pages": "src/pages",
+    "components": "src/components",
+    "assets": "src/assets",
+    "styles": "src"
+  },
+  "router": {
+    "basename": "/utility-tools",
+    "library": "react-router-dom"
+  },
+  "deployment": {
+    "platform": "GitHub Pages",
+    "basePath": "/utility-tools"
+  }
+}
