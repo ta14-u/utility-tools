@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { QRCodeSVG } from 'qrcode.react';
+import { QRCodeSVG } from "qrcode.react";
+import { useState } from "react";
 
 const QRCodeGenerator = () => {
-  const [text, setText] = useState('');
-  const [qrCodeText, setQrCodeText] = useState('');
+  const [text, setText] = useState("");
+  const [qrCodeText, setQrCodeText] = useState("");
 
   const handleGenerateQRCode = () => {
     setQrCodeText(text);
@@ -19,7 +19,9 @@ const QRCodeGenerator = () => {
           onChange={(e) => setText(e.target.value)}
           placeholder="Enter text to generate QR code"
         />
-        <button onClick={handleGenerateQRCode}>Generate</button>
+        <button type="button" onClick={handleGenerateQRCode}>
+          Generate
+        </button>
       </div>
       {qrCodeText && (
         <div className="qr-code-container">

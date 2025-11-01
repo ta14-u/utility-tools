@@ -51,7 +51,9 @@
   border-radius: 4px;
   font-weight: 600;
   font-size: 1.1rem;
-  transition: background-color 0.3s ease, outline 0.2s ease;
+  transition:
+    background-color 0.3s ease,
+    outline 0.2s ease;
   outline: 3px solid transparent;
   outline-offset: 2px;
 }
@@ -99,7 +101,9 @@
   cursor: pointer;
   font-weight: 600;
   font-size: 1.1rem;
-  transition: background-color 0.3s ease, outline 0.2s ease;
+  transition:
+    background-color 0.3s ease,
+    outline 0.2s ease;
   outline: 3px solid transparent;
   outline-offset: 2px;
 }
