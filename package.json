@@ -12,6 +12,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@zxing/library": "^0.21.3",
     "jsqr": "^1.4.0",
     "qrcode.react": "3.2.0",
     "react": "^19.0.0",
