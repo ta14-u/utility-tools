@@ -76,13 +76,27 @@
   padding: 2rem;
 }
 
+.input-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  max-width: 500px;
+  margin: 2rem 0;
+}
+
 .input-container {
   display: flex;
   align-items: flex-start;
   gap: 1rem;
-  margin: 2rem 0;
   width: 100%;
-  max-width: 500px;
+}
+
+.message-container {
+  width: 100%;
+  text-align: left;
+  margin-top: 5px;
+  font-size: 0.8em;
 }
 
 .input-container textarea {
@@ -127,4 +141,23 @@
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.decoder-container {
+  width: 100%;
+  max-width: 500px;
+  margin: 2rem 0;
+}
+
+.decoded-text-box {
+  flex: 1;
+  padding: 0.5rem; /* textarea と統一 */
+  border-radius: 4px; /* textarea と統一 */
+  min-height: 100px; /* textarea と統一 */
+  white-space: pre-wrap;
+  word-break: break-all;
+  text-align: left;
+  font-family: inherit;
+  font-size: 1rem; /* textarea と統一 */
+  box-sizing: border-box;
 }
