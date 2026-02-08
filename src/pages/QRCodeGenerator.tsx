@@ -13,8 +13,7 @@ const QRCodeGenerator = () => {
     <div className="qr-code-generator">
       <h1>QR Code Generator</h1>
       <div className="input-container">
-        <input
-          type="text"
+        <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           placeholder="Enter text to generate QR code"
