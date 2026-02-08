@@ -51,7 +51,9 @@
   border-radius: 4px;
   font-weight: 600;
   font-size: 1.1rem;
-  transition: background-color 0.3s ease, outline 0.2s ease;
+  transition:
+    background-color 0.3s ease,
+    outline 0.2s ease;
   outline: 3px solid transparent;
   outline-offset: 2px;
 }
@@ -74,20 +76,37 @@
   padding: 2rem;
 }
 
-.input-container {
+.input-section {
   display: flex;
-  gap: 1rem;
-  margin: 2rem 0;
+  flex-direction: column;
+  align-items: center;
   width: 100%;
   max-width: 500px;
+  margin: 2rem 0;
 }
 
-.input-container input {
+.input-container {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  width: 100%;
+}
+
+.message-container {
+  width: 100%;
+  text-align: left;
+  margin-top: 5px;
+  font-size: 0.8em;
+}
+
+.input-container textarea {
   flex: 1;
   padding: 0.5rem;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 1rem;
+  min-height: 100px;
+  resize: vertical;
 }
 
 .input-container button {
@@ -99,7 +118,9 @@
   cursor: pointer;
   font-weight: 600;
   font-size: 1.1rem;
-  transition: background-color 0.3s ease, outline 0.2s ease;
+  transition:
+    background-color 0.3s ease,
+    outline 0.2s ease;
   outline: 3px solid transparent;
   outline-offset: 2px;
 }
@@ -120,4 +141,23 @@
   background-color: white;
   border-radius: 8px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.decoder-container {
+  width: 100%;
+  max-width: 500px;
+  margin: 2rem 0;
+}
+
+.decoded-text-box {
+  flex: 1;
+  padding: 0.5rem; /* textarea と統一 */
+  border-radius: 4px; /* textarea と統一 */
+  min-height: 100px; /* textarea と統一 */
+  white-space: pre-wrap;
+  word-break: break-all;
+  text-align: left;
+  font-family: inherit;
+  font-size: 1rem; /* textarea と統一 */
+  box-sizing: border-box;
 }
