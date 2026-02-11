@@ -13,6 +13,7 @@ import BitSource from "@zxing/library/esm/core/common/BitSource";
 import BitMatrixParser from "@zxing/library/esm/core/qrcode/decoder/BitMatrixParser";
 import DecodedBitStreamParser from "@zxing/library/esm/core/qrcode/decoder/DecodedBitStreamParser";
 import Mode from "@zxing/library/esm/core/qrcode/decoder/Mode";
+import type Version from "@zxing/library/esm/core/qrcode/decoder/Version";
 import Detector from "@zxing/library/esm/core/qrcode/detector/Detector";
 import jsQR from "jsqr";
 
@@ -20,7 +21,10 @@ type DecodeResult = { text: string; encoding: string };
 type StatusHandler = (status: string) => void;
 
 const joinByteSegments = (segments: Uint8Array[]) => {
-  const totalLength = segments.reduce((sum, segment) => sum + segment.length, 0);
+  const totalLength = segments.reduce(
+    (sum, segment) => sum + segment.length,
+    0,
+  );
   const joined = new Uint8Array(totalLength);
   let offset = 0;
   for (const segment of segments) {
@@ -30,11 +34,7 @@ const joinByteSegments = (segments: Uint8Array[]) => {
   return joined;
 };
 
-const tryDecode = (
-  bytes: Uint8Array | null,
-  label: string,
-  fatal: boolean,
-) => {
+const tryDecode = (bytes: Uint8Array | null, label: string, fatal: boolean) => {
   if (!bytes || bytes.length === 0) {
     return null;
   }
@@ -43,30 +43,6 @@ const tryDecode = (
   } catch {
     return null;
   }
-};
-
-const dumpHex = (bytes: Uint8Array | null, limit = 128) => {
-  if (!bytes || bytes.length === 0) {
-    return null;
-  }
-  const max = Math.min(bytes.length, limit);
-  const hex = Array.from(bytes.slice(0, max))
-    .map((value) => value.toString(16).padStart(2, "0"))
-    .join(" ");
-  if (bytes.length > limit) {
-    return `${hex} ...(+${bytes.length - limit} bytes)`;
-  }
-  return hex;
-};
-
-const dumpCodePoints = (value: string, limit = 128) => {
-  const codePoints = Array.from(value).map((char) =>
-    char.codePointAt(0)?.toString(16).padStart(4, "0"),
-  );
-  if (codePoints.length > limit) {
-    return `${codePoints.slice(0, limit).join(" ")} ...(+${codePoints.length - limit} chars)`;
-  }
-  return codePoints.join(" ");
 };
 
 const parseECIValue = (bits: BitSource) => {
@@ -125,7 +101,7 @@ const skipBits = (bits: BitSource, totalBits: number) => {
   }
 };
 
-const scanForKanjiMode = (bytes: Uint8Array, version: any) => {
+const scanForKanjiMode = (bytes: Uint8Array, version: Version) => {
   const bits = new BitSource(bytes);
   let hasKanji = false;
   let isValid = true;
@@ -139,7 +115,10 @@ const scanForKanjiMode = (bytes: Uint8Array, version: any) => {
       if (mode === Mode.TERMINATOR) {
         break;
       }
-      if (mode === Mode.FNC1_FIRST_POSITION || mode === Mode.FNC1_SECOND_POSITION) {
+      if (
+        mode === Mode.FNC1_FIRST_POSITION ||
+        mode === Mode.FNC1_SECOND_POSITION
+      ) {
         continue;
       }
       if (mode === Mode.STRUCTURED_APPEND) {
@@ -217,17 +196,9 @@ const scanForKanjiMode = (bytes: Uint8Array, version: any) => {
         break;
       }
     }
-  } catch (err) {
+  } catch {
     isValid = false;
     failureReason = "exception";
-    console.log(
-      "DEBUG: ZXing kanji scan exception:",
-      err,
-      "byteOffset:",
-      bits.getByteOffset(),
-      "bitOffset:",
-      bits.getBitOffset(),
-    );
   }
   return { hasKanji, isValid, failureReason };
 };
@@ -241,9 +212,7 @@ const decodeWithZXing = (
 
   const zxingDecode = (
     source: RGBLuminanceSource | InvertedLuminanceSource,
-    label: string,
   ) => {
-    console.log(`DEBUG: Attempting ZXing decode (${label})`);
     try {
       const bitmap = new BinaryBitmap(new HybridBinarizer(source));
       return { result: zxingReader.decode(bitmap), bitmap };
@@ -257,35 +226,50 @@ const decodeWithZXing = (
     }
   };
 
-  let zxingResult = zxingDecode(luminanceSource, "Normal");
+  let zxingResult = zxingDecode(luminanceSource);
   if (!zxingResult) {
-    console.log("DEBUG: Normal ZXing failed, trying inverted");
     const invertedSource = new InvertedLuminanceSource(luminanceSource);
-    zxingResult = zxingDecode(invertedSource, "Inverted");
+    zxingResult = zxingDecode(invertedSource);
   }
 
   return zxingResult;
 };
 
-const decodeWithJsQR = (rgba: Uint8ClampedArray, width: number, height: number) => {
-  console.log("DEBUG: ZXing failed, trying jsQR");
+const decodeWithJsQR = (
+  rgba: Uint8ClampedArray,
+  width: number,
+  height: number,
+) => {
   const code = jsQR(rgba, width, height, {
     inversionAttempts: "attemptBoth",
   });
 
   if (code) {
-    console.log(
-      "DEBUG: jsQR success, data length:",
-      code.data.length,
-      "binary length:",
-      code.binaryData.length,
-    );
+    const binary = new Uint8Array(code.binaryData);
+
+    // Check if decoded text contains Japanese characters (indicates Kanji mode)
+    const hasJapanese =
+      /[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\u4e00-\u9faf\uff66-\uff9f]/.test(
+        code.data,
+      );
+
+    if (hasJapanese) {
+      // Contains Japanese characters - likely Shift_JIS Kanji mode
+      return { text: code.data, encoding: "Shift-JIS (Kanji mode)" };
+    }
+
+    // Try Shift-JIS decode for non-Japanese text
+    try {
+      const sjis = new TextDecoder("shift-jis", { fatal: true }).decode(binary);
+      if (sjis.length > 0 && sjis === code.data) {
+        return { text: sjis, encoding: "Shift-JIS" };
+      }
+    } catch {}
+
     if (code.data === "" && code.binaryData.length > 0) {
-      const binary = new Uint8Array(code.binaryData);
       try {
         const utf8 = new TextDecoder("utf-8", { fatal: true }).decode(binary);
         if (utf8.length > 0) {
-          console.log("DEBUG: jsQR manual UTF-8 success");
           return { text: utf8, encoding: "UTF-8" };
         }
       } catch {
@@ -294,7 +278,6 @@ const decodeWithJsQR = (rgba: Uint8ClampedArray, width: number, height: number) 
             binary,
           );
           if (sjis.length > 0) {
-            console.log("DEBUG: jsQR manual Shift-JIS success");
             return { text: sjis, encoding: "Shift-JIS" };
           }
         } catch {
@@ -332,7 +315,6 @@ const performDecode = async (
       const ratio = Math.min(MAX_DIMENSION / width, MAX_DIMENSION / height);
       width = Math.floor(width * ratio);
       height = Math.floor(height * ratio);
-      console.log("DEBUG: Image resized to", width, "x", height);
     }
   }
 
@@ -340,12 +322,7 @@ const performDecode = async (
   canvas.height = height;
   context.drawImage(imageSource, 0, 0, width, height);
 
-  console.log(
-    `DEBUG: Starting decode process (retry: ${isRetry}, size: ${width}x${height})`,
-  );
-  onStatus(
-    isRetry ? "Retrying with upscaled image..." : "Decoding QR code...",
-  );
+  onStatus(isRetry ? "Retrying with upscaled image..." : "Decoding QR code...");
 
   const hints = new Map();
   hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
@@ -376,38 +353,39 @@ const performDecode = async (
       ? joinByteSegments(byteSegments)
       : null;
 
-    console.log(
-      "DEBUG: ZXing rawBytes length:",
-      rawBytes ? rawBytes.length : null,
-      "metadata:",
-      metadata ?? null,
-      "byteSegments:",
-      Array.isArray(byteSegments) ? byteSegments.map((segment) => segment.length) : null,
-    );
-    console.log(
-      "DEBUG: ZXing metadata entries:",
-      metadata ? Array.from(metadata.entries()) : null,
-    );
-    console.log("DEBUG: ZXing decoded code points:", dumpCodePoints(decoded));
-    console.log("DEBUG: ZXing rawBytes hex:", dumpHex(rawBytes));
-    console.log("DEBUG: ZXing byteSegments hex:", dumpHex(byteSegmentsBytes));
-
+    // First, check for Kanji mode (highest priority)
     if (rawBytes && rawBytes.length > 0) {
+      try {
+        const detectorResult = new Detector(bitmap.getBlackMatrix()).detect(
+          hints,
+        );
+        const parser = new BitMatrixParser(detectorResult.getBits());
+        const version = parser.readVersion();
+        const ecLevel = parser
+          .readFormatInformation()
+          .getErrorCorrectionLevel();
+        const scanResult = scanForKanjiMode(rawBytes, version);
+        const decodedFromRaw = DecodedBitStreamParser.decode(
+          rawBytes,
+          version,
+          ecLevel,
+          hints,
+        ).getText();
+        if (scanResult.isValid && scanResult.hasKanji) {
+          if (decodedFromRaw === decoded) {
+            encoding = "Shift-JIS (Kanji mode)";
+          }
+        }
+      } catch {}
+    }
+
+    // If not Kanji mode, try UTF-8 and Shift-JIS detection
+    if (encoding === "Unknown" && rawBytes && rawBytes.length > 0) {
       const utf8 = tryDecode(rawBytes, "utf-8", true);
-      console.log(
-        "DEBUG: ZXing rawBytes utf-8 match:",
-        utf8 !== null && utf8 === decoded,
-        "decoded length:",
-        decoded.length,
-      );
       if (utf8 !== null && utf8 === decoded) {
         encoding = "UTF-8";
       } else {
         const sjis = tryDecode(rawBytes, "shift-jis", true);
-        console.log(
-          "DEBUG: ZXing rawBytes shift-jis match:",
-          sjis !== null && sjis === decoded,
-        );
         if (sjis !== null && sjis === decoded) {
           encoding = "Shift-JIS";
         }
@@ -416,61 +394,21 @@ const performDecode = async (
 
     if (encoding === "Unknown" && byteSegmentsBytes) {
       const utf8 = tryDecode(byteSegmentsBytes, "utf-8", true);
-      console.log(
-        "DEBUG: ZXing byteSegments utf-8 match:",
-        utf8 !== null && utf8 === decoded,
-      );
       if (utf8 !== null && utf8 === decoded) {
         encoding = "UTF-8";
       } else {
         const sjis = tryDecode(byteSegmentsBytes, "shift-jis", true);
-        console.log(
-          "DEBUG: ZXing byteSegments shift-jis match:",
-          sjis !== null && sjis === decoded,
-        );
         if (sjis !== null && sjis === decoded) {
           encoding = "Shift-JIS";
         }
       }
     }
 
-    if (encoding === "Unknown" && rawBytes && rawBytes.length > 0) {
-      try {
-        const detectorResult = new Detector(bitmap.getBlackMatrix()).detect(hints);
-        const parser = new BitMatrixParser(detectorResult.getBits());
-        const version = parser.readVersion();
-        const ecLevel = parser.readFormatInformation().getErrorCorrectionLevel();
-        const scanResult = scanForKanjiMode(rawBytes, version);
-        const decodedFromRaw = DecodedBitStreamParser.decode(
-          rawBytes,
-          version,
-          ecLevel,
-          hints,
-        ).getText();
-        console.log(
-          "DEBUG: ZXing kanji scan:",
-          scanResult,
-          "decodedFromRaw match:",
-          decodedFromRaw === decoded,
-        );
-        if (scanResult.isValid && scanResult.hasKanji) {
-          if (decodedFromRaw === decoded) {
-            encoding = "Shift-JIS (Kanji mode)";
-          }
-        }
-      } catch (err) {
-        console.log("DEBUG: ZXing kanji parse failed:", err);
-      }
-    }
-
-    console.log("DEBUG: ZXing success:", decoded, "Encoding:", encoding);
-
     if (decoded === "" && rawBytes && rawBytes.length > 0) {
       const binary = rawBytes;
       try {
         const utf8 = new TextDecoder("utf-8", { fatal: true }).decode(binary);
         if (utf8.length > 0) {
-          console.log("DEBUG: ZXing manual UTF-8 success");
           decoded = utf8;
           encoding = "UTF-8";
         }
@@ -480,7 +418,6 @@ const performDecode = async (
             binary,
           );
           if (sjis.length > 0) {
-            console.log("DEBUG: ZXing manual Shift-JIS success");
             decoded = sjis;
             encoding = "Shift-JIS";
           }
@@ -509,9 +446,6 @@ export const decodeQrCode = async (
     image.width < 1000 &&
     image.height < 1000
   ) {
-    console.log(
-      `DEBUG: Initial decode result (${finalResult?.text}) unsatisfactory, trying upscale retry`,
-    );
     const upscaleCanvas = document.createElement("canvas");
     upscaleCanvas.width = image.width * 2;
     upscaleCanvas.height = image.height * 2;
@@ -527,7 +461,6 @@ export const decodeQrCode = async (
         upscaleCanvas.height,
       );
       const retryResult = await performDecode(upscaleCanvas, onStatus, true);
-      console.log("DEBUG: Upscale retry result:", retryResult);
       if (retryResult !== null) {
         const isRetryPlaceholder = retryResult.text.startsWith(
           "[Decoded empty string",

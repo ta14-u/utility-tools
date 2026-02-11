@@ -92,6 +92,28 @@
   width: 100%;
 }
 
+.kanji-mode-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+  justify-content: flex-start;
+}
+
+.kanji-mode-option input {
+  margin: 0;
+}
+
+.kanji-mode-hint {
+  width: 100%;
+  text-align: left;
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+
 .message-container {
   width: 100%;
   text-align: left;

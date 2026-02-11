@@ -14,32 +14,26 @@ const useQRCodeDecoder = () => {
       return;
     }
 
-    console.log("DEBUG: File selected:", file.name, file.type, file.size);
     setDecodeStatus("Processing image...");
     setDecodedText("");
     setDecodedEncoding("");
 
     const reader = new FileReader();
     reader.onerror = (err) => {
-      console.error("DEBUG: FileReader error:", err);
+      console.error("FileReader error:", err);
       setDecodeStatus("Error: Failed to read file.");
     };
     reader.onload = (event) => {
-      console.log("DEBUG: FileReader loaded");
       const img = new Image();
       img.onerror = (err) => {
-        console.error("DEBUG: Image load error:", err);
+        console.error("Image load error:", err);
         setDecodeStatus("Error: Failed to load image.");
       };
       img.onload = async () => {
-        console.log("DEBUG: Image object loaded", img.width, "x", img.height);
-
         try {
           const finalResult = await decodeQrCode(img, setDecodeStatus);
 
           if (finalResult !== null) {
-            console.log("DEBUG: Setting final decoded text");
-
             if (finalResult.text === "") {
               setDecodedText("[Empty string decoded]");
             } else {
@@ -55,7 +49,7 @@ const useQRCodeDecoder = () => {
             );
           }
         } catch (err) {
-          console.error("DEBUG: Unexpected error during decoding:", err);
+          console.error("Unexpected error during decoding:", err);
           setDecodeStatus(
             `Error: ${err instanceof Error ? err.message : String(err)}`,
           );

@@ -1,11 +1,81 @@
 import { QRCodeCanvas } from "qrcode.react";
+import { useEffect, useRef } from "react";
 
 import { useQRCodeDecoder } from "../hooks/useQRCodeDecoder";
 import { useQRCodeGenerator } from "../hooks/useQRCodeGenerator";
 
+const QR_CODE_CANVAS_ID = "generated-qr-code";
+const QR_CODE_SIZE = 256;
+const QR_CODE_MARGIN = 4;
+
+type QRCodeMatrix = {
+  matrix: number[][];
+  size: number;
+};
+
+type KanjiQRCodeCanvasProps = {
+  qrCodeMatrix: QRCodeMatrix;
+  size: number;
+  canvasId: string;
+};
+
+const KanjiQRCodeCanvas = ({
+  qrCodeMatrix,
+  size,
+  canvasId,
+}: KanjiQRCodeCanvasProps) => {
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return;
+    }
+
+    const moduleCount = qrCodeMatrix.size;
+    const totalModules = moduleCount + QR_CODE_MARGIN * 2;
+    const scale = size / totalModules;
+
+    canvas.width = size;
+    canvas.height = size;
+    context.imageSmoothingEnabled = false;
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, size, size);
+    context.fillStyle = "#000000";
+
+    for (let y = 0; y < moduleCount; y += 1) {
+      for (let x = 0; x < moduleCount; x += 1) {
+        if (qrCodeMatrix.matrix[y][x] === 1) {
+          context.fillRect(
+            (x + QR_CODE_MARGIN) * scale,
+            (y + QR_CODE_MARGIN) * scale,
+            scale,
+            scale,
+          );
+        }
+      }
+    }
+  }, [qrCodeMatrix, size]);
+
+  return <canvas id={canvasId} ref={canvasRef} aria-label="QR code" />;
+};
+
 const QRCodeGenerator = () => {
-  const { text, setText, qrCodeText, generateError, handleGenerateQRCode } =
-    useQRCodeGenerator();
+  const {
+    text,
+    setText,
+    qrCodeText,
+    qrCodeMatrix,
+    generateError,
+    useKanjiMode,
+    setUseKanjiMode,
+    handleGenerateQRCode,
+  } = useQRCodeGenerator();
   const {
     decodedText,
     decodedEncoding,
@@ -16,8 +86,8 @@ const QRCodeGenerator = () => {
   } = useQRCodeDecoder();
 
   const downloadPNG = () => {
-    const canvas = document.querySelector("canvas");
-    if (canvas) {
+    const canvas = document.getElementById(QR_CODE_CANVAS_ID);
+    if (canvas instanceof HTMLCanvasElement) {
       const url = canvas.toDataURL("image/png");
       const link = document.createElement("a");
       link.href = url;
@@ -43,6 +113,18 @@ const QRCodeGenerator = () => {
             Generate
           </button>
         </div>
+        <label className="kanji-mode-option">
+          <input
+            type="checkbox"
+            checked={useKanjiMode}
+            onChange={(event) => setUseKanjiMode(event.target.checked)}
+          />
+          Generate in Kanji mode (Shift_JIS)
+        </label>
+        <div className="kanji-mode-hint">
+          Kanji mode supports Shift_JIS characters. Mixed mode (Kanji + ASCII)
+          is automatically enabled.
+        </div>
         <div className="message-container">
           {generateError ? (
             <div className="error-message" style={{ color: "#cf1322" }}>
@@ -56,9 +138,22 @@ const QRCodeGenerator = () => {
         </div>
       </div>
 
-      {qrCodeText && (
+      {(qrCodeText || qrCodeMatrix) && (
         <div className="qr-code-container">
-          <QRCodeCanvas value={qrCodeText} size={256} includeMargin={true} />
+          {qrCodeMatrix ? (
+            <KanjiQRCodeCanvas
+              qrCodeMatrix={qrCodeMatrix}
+              size={QR_CODE_SIZE}
+              canvasId={QR_CODE_CANVAS_ID}
+            />
+          ) : (
+            <QRCodeCanvas
+              id={QR_CODE_CANVAS_ID}
+              value={qrCodeText}
+              size={QR_CODE_SIZE}
+              includeMargin={true}
+            />
+          )}
           <div className="action-container">
             <button type="button" onClick={downloadPNG}>
               Download PNG
