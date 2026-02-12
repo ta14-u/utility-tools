@@ -9,10 +9,13 @@
     "lint": "biome lint .",
     "format": "biome format --write .",
     "check": "biome check .",
+    "test": "vitest run",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@nuintun/qrcode": "^5.0.3",
     "@zxing/library": "^0.21.3",
+    "encoding-japanese": "^1.0.30",
     "jsqr": "^1.4.0",
     "qrcode.react": "3.2.0",
     "react": "^19.0.0",
@@ -24,7 +27,9 @@
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react-swc": "^3.8.0",
+    "tsx": "^4.21.0",
     "typescript": "~5.7.2",
-    "vite": "^6.3.1"
+    "vite": "^6.3.1",
+    "vitest": "^4.0.18"
   }
 }
