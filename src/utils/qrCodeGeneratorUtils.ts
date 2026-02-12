@@ -55,7 +55,17 @@ const isKanjiModeCompatible = (text: string): boolean => {
     return false;
   }
 
-  return sjisArray.length > 0;
+  if (sjisArray.length === 0) {
+    return false;
+  }
+
+  // Final validation: try to create a Kanji segment to ensure @nuintun/qrcode accepts it
+  try {
+    new Kanji(text);
+    return true;
+  } catch {
+    return false;
+  }
 };
 
 const isShiftJISCompatible = (text: string): boolean => {
