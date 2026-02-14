@@ -1,9 +1,7 @@
 import { useState } from "react";
 
-import {
-  encodeKanjiQRCode,
-  isKanjiModeCompatible,
-} from "../utils/qrCodeGeneratorUtils";
+import { encodeKanjiQRCode } from "../utils/qr/encode/kanji";
+import { isKanjiModeCompatible } from "../utils/qr/shiftjis";
 
 const MAX_QR_CODE_LENGTH = 4296;
 

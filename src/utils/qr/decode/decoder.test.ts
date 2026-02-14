@@ -1,19 +1,9 @@
 import { MultiFormatReader, ResultMetadataType } from "@zxing/library";
-import BitSource from "@zxing/library/esm/core/common/BitSource";
-import Version from "@zxing/library/esm/core/qrcode/decoder/Version";
 import type Result from "@zxing/library/esm/core/Result";
 import jsQR from "jsqr";
 import { describe, expect, it, vi } from "vitest";
-import {
-  decodeQrCode,
-  joinByteSegments,
-  parseECIValue,
-  scanForKanjiMode,
-  skipAlphanumeric,
-  skipBits,
-  skipNumeric,
-  tryDecode,
-} from "./decoderUtils";
+
+import { decodeQrCode } from "./decoder";
 
 // ブラウザ API のモック
 class MockTextDecoder {
@@ -82,7 +72,7 @@ vi.mock("jsqr", () => ({
   }),
 }));
 
-describe("decoderUtils", () => {
+describe("qr/decode/decoder", () => {
   describe("decodeQrCode", () => {
     it("should attempt to decode using ZXing", async () => {
       const { MultiFormatReader } = await import("@zxing/library");
@@ -765,182 +755,6 @@ describe("decoderUtils", () => {
 
       const result = await decodeQrCode(mockImage, vi.fn());
       expect(result).toBeNull();
-    });
-  });
-
-  describe("internal utilities", () => {
-    it("joinByteSegments should join multiple Uint8Arrays", () => {
-      const seg1 = new Uint8Array([1, 2]);
-      const seg2 = new Uint8Array([3, 4]);
-      const joined = joinByteSegments([seg1, seg2]);
-      expect(joined).toEqual(new Uint8Array([1, 2, 3, 4]));
-    });
-
-    it("tryDecode should return null for empty/null bytes", () => {
-      expect(tryDecode(null, "utf-8", true)).toBeNull();
-      expect(tryDecode(new Uint8Array(0), "utf-8", true)).toBeNull();
-    });
-
-    it("tryDecode should return null on error when fatal is true", () => {
-      // 0xFF は不正な UTF-8
-      const invalidUtf8 = new Uint8Array([0xff]);
-      expect(tryDecode(invalidUtf8, "utf-8", true)).toBeNull();
-    });
-
-    it("parseECIValue should parse various lengths", () => {
-      // 1 バイト: 0-127
-      const bits1 = new BitSource(new Uint8Array([0x7f]));
-      expect(parseECIValue(bits1)).toBe(127);
-
-      // 2 バイト: 128-16383
-      const bits2 = new BitSource(new Uint8Array([0x81, 0x02]));
-      // (0x81 & 0x3F) << 8 | 0x02 = 1 << 8 | 2 = 258
-      expect(parseECIValue(bits2)).toBe(258);
-
-      // 3 バイト: 16384-999999
-      const bits3 = new BitSource(new Uint8Array([0xc1, 0x02, 0x03]));
-      // (0xC1 & 0x1F) << 16 | (0x02 << 8) | 0x03 = 1 << 16 | 515 = 65536 + 515 = 66051
-      expect(parseECIValue(bits3)).toBe(66051);
-
-      // 短い入力
-      expect(parseECIValue(new BitSource(new Uint8Array(0)))).toBeNull();
-      expect(parseECIValue(new BitSource(new Uint8Array([0x81])))).toBeNull();
-      expect(
-        parseECIValue(new BitSource(new Uint8Array([0xc1, 0x02]))),
-      ).toBeNull();
-    });
-
-    it("skipNumeric should skip correct number of bits", () => {
-      const bits = new BitSource(new Uint8Array(10));
-      const spy = vi.spyOn(bits, "readBits");
-
-      skipNumeric(bits, 3); // 10 ビット
-      expect(spy).toHaveBeenCalledWith(10);
-
-      skipNumeric(bits, 2); // 7 ビット
-      expect(spy).toHaveBeenCalledWith(7);
-
-      skipNumeric(bits, 1); // 4 ビット
-      expect(spy).toHaveBeenCalledWith(4);
-    });
-
-    it("skipAlphanumeric should skip correct number of bits", () => {
-      const bits = new BitSource(new Uint8Array(10));
-      const spy = vi.spyOn(bits, "readBits");
-
-      skipAlphanumeric(bits, 2); // 11 ビット
-      expect(spy).toHaveBeenCalledWith(11);
-
-      skipAlphanumeric(bits, 1); // 6 ビット
-      expect(spy).toHaveBeenCalledWith(6);
-    });
-
-    it("skipBits should skip large amount of bits", () => {
-      const bits = new BitSource(new Uint8Array(10));
-      const spy = vi.spyOn(bits, "readBits");
-
-      skipBits(bits, 50);
-      expect(spy).toHaveBeenCalledWith(32);
-      expect(spy).toHaveBeenCalledWith(18);
-    });
-
-    it("scanForKanjiMode should detect Kanji mode in bitstream", () => {
-      // BitSource の手動モックまたは実ビット
-      const version = Version.getVersionForNumber(1);
-      // Mode.KANJI は 0x8。Version 1 の場合、漢字カウントは 8 ビット。
-      // Mode(4) + Count(8)
-      // 1000 00000001 -> 0x80, 0x10
-      const bytes = new Uint8Array([0x80, 0x10, 0x00]);
-
-      try {
-        const result = scanForKanjiMode(bytes, version);
-        if (result.isValid) expect(result.hasKanji).toBeDefined();
-      } catch (_e) {}
-    });
-
-    it("scanForKanjiMode should return invalid for unknown mode", () => {
-      const version = Version.getVersionForNumber(1);
-      const bytes = new Uint8Array([0x00]); // ターミネータ 0000
-      try {
-        const result = scanForKanjiMode(bytes, version);
-        expect(result.isValid).toBe(true);
-      } catch (_e) {}
-    });
-
-    it("scanForKanjiMode exception handling", () => {
-      const version = Version.getVersionForNumber(1);
-      try {
-        // @ts-expect-error
-        scanForKanjiMode(null, version);
-      } catch (_e) {}
-    });
-
-    it("scanForKanjiMode should handle ECI, FNC1 and Structured Append", () => {
-      const version = Version.getVersionForNumber(1);
-
-      // FNC1 (0101)
-      const fnc1_1 = new Uint8Array([0x50, 0x00]);
-      scanForKanjiMode(fnc1_1, version);
-
-      // FNC1 (1001)
-      const fnc1_2 = new Uint8Array([0x90, 0x00]);
-      scanForKanjiMode(fnc1_2, version);
-
-      // Structured Append (0011) + 16 bits.
-      const sa = new Uint8Array([0x30, 0x00, 0x00, 0x00]);
-      scanForKanjiMode(sa, version);
-
-      // ECI (0111) + ECI 値。
-      // 1 バイト ECI (0-127): 0111 0xxxxxxx
-      const eci1 = new Uint8Array([0x70, 0x01, 0x00]);
-      scanForKanjiMode(eci1, version);
-
-      // 2 バイト ECI: 0111 10xxxxxx xxxxxxxx
-      const eci2 = new Uint8Array([0x78, 0x01, 0x01, 0x00]);
-      scanForKanjiMode(eci2, version);
-
-      // 3 バイト ECI: 0111 110xxxxx xxxxxxxx xxxxxxxx
-      const eci3 = new Uint8Array([0x7c, 0x01, 0x01, 0x01, 0x00]);
-      scanForKanjiMode(eci3, version);
-    });
-
-    it("scanForKanjiMode should return invalid for various failure reasons", () => {
-      const version = Version.getVersionForNumber(1);
-
-      // Structured Append が短すぎる
-      expect(scanForKanjiMode(new Uint8Array([0x30]), version).isValid).toBe(
-        false,
-      );
-
-      // ECI 値が短すぎる
-      expect(scanForKanjiMode(new Uint8Array([0x70]), version).isValid).toBe(
-        false,
-      );
-
-      // 漢字カウントが短すぎる
-      expect(scanForKanjiMode(new Uint8Array([0xd0]), version).isValid).toBe(
-        false,
-      );
-
-      // 数字カウントが短すぎる
-      expect(scanForKanjiMode(new Uint8Array([0x10]), version).isValid).toBe(
-        false,
-      );
-
-      // 英数字カウントが短すぎる
-      expect(scanForKanjiMode(new Uint8Array([0x20]), version).isValid).toBe(
-        false,
-      );
-
-      // バイトカウントが短すぎる
-      expect(scanForKanjiMode(new Uint8Array([0x40]), version).isValid).toBe(
-        false,
-      );
-
-      // 漢字カウントが短すぎる
-      expect(scanForKanjiMode(new Uint8Array([0x80]), version).isValid).toBe(
-        false,
-      );
     });
   });
 
