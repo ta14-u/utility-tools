@@ -1,6 +1,8 @@
+import { MultiFormatReader, ResultMetadataType } from "@zxing/library";
 import BitSource from "@zxing/library/esm/core/common/BitSource";
 import Version from "@zxing/library/esm/core/qrcode/decoder/Version";
 import type Result from "@zxing/library/esm/core/Result";
+import jsQR from "jsqr";
 import { describe, expect, it, vi } from "vitest";
 import {
   decodeQrCode,
@@ -13,7 +15,7 @@ import {
   tryDecode,
 } from "./decoderUtils";
 
-// ブラウザAPIのモック
+// ブラウザ API のモック
 class MockTextDecoder {
   label: string;
   constructor(label = "utf-8") {
@@ -124,7 +126,7 @@ describe("decoderUtils", () => {
     });
 
     it("should fallback to jsQR if ZXing fails", async () => {
-      // ZXingが失敗するように設定
+      // ZXing が失敗するように設定
       const { MultiFormatReader } = await import("@zxing/library");
       vi.spyOn(MultiFormatReader.prototype, "decode").mockImplementation(() => {
         throw new Error("zxing failed");
@@ -191,13 +193,13 @@ describe("decoderUtils", () => {
         createElement: vi.fn().mockReturnValue(mockCanvas),
       });
 
-      // Simple mock for UTF-8 detection
+      // UTF-8 検出用の簡易モック
       const originalTextDecoder = globalThis.TextDecoder;
       class SimpleUtf8TextDecoder {
         constructor(public label: string) {}
         decode(bytes: Uint8Array) {
           if (this.label === "utf-8") {
-            // Simplified: if it looks like our test string's bytes, return it
+            // 簡易化：テスト文字列のバイト列と一致する場合はその文字列を返す
             if (bytes.length === utf8Bytes.length) return "こんにちは";
             return new originalTextDecoder("utf-8").decode(bytes);
           }
@@ -215,7 +217,7 @@ describe("decoderUtils", () => {
     });
 
     it("should handle Shift-JIS encoding detection", async () => {
-      // Shift-JIS (SJIS) bytes for "テスト"
+      // "テスト" の Shift-JIS (SJIS) バイト列
       const sjisBytes = new Uint8Array([0x83, 0x67, 0x83, 0x52, 0x83, 0x67]);
       const { MultiFormatReader } = await import("@zxing/library");
       vi.spyOn(MultiFormatReader.prototype, "decode").mockReturnValue({
@@ -247,7 +249,7 @@ describe("decoderUtils", () => {
         createElement: vi.fn().mockReturnValue(mockCanvas),
       });
 
-      // Mock TextDecoder to return proper string for SJIS
+      // SJIS に対して適切な文字列を返すように TextDecoder をモック
       const originalTextDecoder = globalThis.TextDecoder;
       class SjisTextDecoder {
         constructor(public label: string) {}
@@ -273,7 +275,7 @@ describe("decoderUtils", () => {
 
       vi.spyOn(MultiFormatReader.prototype, "decode").mockReturnValue({
         getText: () => "Hello",
-        getRawBytes: () => new Uint8Array(0), // No raw bytes
+        getRawBytes: () => new Uint8Array(0), // 生バイトなし
         getResultMetadata: () => ({
           get: (type: number) => {
             if (type === 1) {
@@ -306,11 +308,11 @@ describe("decoderUtils", () => {
 
       const result = await decodeQrCode(mockImage, vi.fn());
       expect(result?.text).toBe("Hello");
-      // It should still detect UTF-8 from byte segments
+      // バイトセグメントから UTF-8 を検出するはず
     });
 
     it("should handle encoding detection with inconsistent rawBytes", async () => {
-      const sjisBytes = new Uint8Array([0x83, 0x67, 0x83, 0x52]); // "テスト" partial
+      const sjisBytes = new Uint8Array([0x83, 0x67, 0x83, 0x52]); // "テスト" の一部
       const { MultiFormatReader } = await import("@zxing/library");
 
       vi.spyOn(MultiFormatReader.prototype, "decode").mockReturnValue({
@@ -344,7 +346,7 @@ describe("decoderUtils", () => {
       class InconsistentTextDecoder {
         constructor(public label: string) {}
         decode(_bytes: Uint8Array) {
-          // Return text that doesn't match decoded text to trigger "Unknown" encoding
+          // デコードされたテキストと一致しないテキストを返し、"Unknown" エンコーディングをトリガーする
           return "Different";
         }
       }
@@ -352,7 +354,7 @@ describe("decoderUtils", () => {
 
       const result = await decodeQrCode(mockImage, vi.fn());
       expect(result?.text).toBe("Test");
-      // Encoding should be Unknown since rawBytes decode doesn't match
+      // rawBytes のデコード結果が一致しないため、エンコーディングが定義されていることを確認
       expect(result?.encoding).toBeDefined();
 
       vi.stubGlobal("TextDecoder", originalTextDecoder);
@@ -362,7 +364,7 @@ describe("decoderUtils", () => {
       const { MultiFormatReader } = await import("@zxing/library");
       const jsQR = (await import("jsqr")).default;
 
-      // Both ZXing and jsQR fail
+      // ZXing と jsQR の両方が失敗
       vi.spyOn(MultiFormatReader.prototype, "decode").mockImplementation(() => {
         throw new Error("fail");
       });
@@ -414,7 +416,7 @@ describe("decoderUtils", () => {
       });
 
       await decodeQrCode(mockImage, vi.fn());
-      // width should be limited to 2000
+      // 幅は 2000 以下に制限されるはず
       expect(mockCanvas.width).toBeLessThanOrEqual(2000);
     });
 
@@ -482,7 +484,7 @@ describe("decoderUtils", () => {
         createElement: vi.fn().mockReturnValue(mockCanvas),
       });
 
-      // Mock TextDecoder to handle Shift-JIS
+      // Shift-JIS を扱うように TextDecoder をモック
       const originalTextDecoder = globalThis.TextDecoder;
       class SjisTextDecoder {
         constructor(public label: string) {}
@@ -491,7 +493,7 @@ describe("decoderUtils", () => {
             return "こんにちは";
           }
           if (this.label === "utf-8") {
-            // UTF-8 should fail for SJIS bytes
+            // SJIS バイト列に対して UTF-8 は失敗するはず
             throw new Error("Invalid UTF-8");
           }
           return "";
@@ -726,7 +728,7 @@ describe("decoderUtils", () => {
       const { MultiFormatReader } = await import("@zxing/library");
       const jsQR = (await import("jsqr")).default;
 
-      // Both ZXing and jsQR fail initially
+      // ZXing と jsQR の両方が最初は失敗
       vi.spyOn(MultiFormatReader.prototype, "decode").mockImplementation(() => {
         throw new Error("fail");
       });
@@ -743,7 +745,7 @@ describe("decoderUtils", () => {
         getContext: vi.fn().mockImplementation(() => {
           callCount++;
           if (callCount === 1) {
-            // First call: normal context for initial attempt
+            // 1回目の呼び出し: 初回試行用の通常のコンテキスト
             return {
               drawImage: vi.fn(),
               getImageData: vi.fn().mockReturnValue({
@@ -751,7 +753,7 @@ describe("decoderUtils", () => {
               }),
             };
           }
-          // Second call: null context for upscale attempt
+          // 2回目の呼び出し: アップスケール試行用の null コンテキスト
           return null;
         }),
         width: 100,
@@ -780,27 +782,27 @@ describe("decoderUtils", () => {
     });
 
     it("tryDecode should return null on error when fatal is true", () => {
-      // 0xFF is invalid UTF-8
+      // 0xFF は不正な UTF-8
       const invalidUtf8 = new Uint8Array([0xff]);
       expect(tryDecode(invalidUtf8, "utf-8", true)).toBeNull();
     });
 
     it("parseECIValue should parse various lengths", () => {
-      // 1 byte: 0-127
+      // 1 バイト: 0-127
       const bits1 = new BitSource(new Uint8Array([0x7f]));
       expect(parseECIValue(bits1)).toBe(127);
 
-      // 2 bytes: 128-16383
+      // 2 バイト: 128-16383
       const bits2 = new BitSource(new Uint8Array([0x81, 0x02]));
       // (0x81 & 0x3F) << 8 | 0x02 = 1 << 8 | 2 = 258
       expect(parseECIValue(bits2)).toBe(258);
 
-      // 3 bytes: 16384-999999
+      // 3 バイト: 16384-999999
       const bits3 = new BitSource(new Uint8Array([0xc1, 0x02, 0x03]));
       // (0xC1 & 0x1F) << 16 | (0x02 << 8) | 0x03 = 1 << 16 | 515 = 65536 + 515 = 66051
       expect(parseECIValue(bits3)).toBe(66051);
 
-      // Short input
+      // 短い入力
       expect(parseECIValue(new BitSource(new Uint8Array(0)))).toBeNull();
       expect(parseECIValue(new BitSource(new Uint8Array([0x81])))).toBeNull();
       expect(
@@ -812,13 +814,13 @@ describe("decoderUtils", () => {
       const bits = new BitSource(new Uint8Array(10));
       const spy = vi.spyOn(bits, "readBits");
 
-      skipNumeric(bits, 3); // 10 bits
+      skipNumeric(bits, 3); // 10 ビット
       expect(spy).toHaveBeenCalledWith(10);
 
-      skipNumeric(bits, 2); // 7 bits
+      skipNumeric(bits, 2); // 7 ビット
       expect(spy).toHaveBeenCalledWith(7);
 
-      skipNumeric(bits, 1); // 4 bits
+      skipNumeric(bits, 1); // 4 ビット
       expect(spy).toHaveBeenCalledWith(4);
     });
 
@@ -826,10 +828,10 @@ describe("decoderUtils", () => {
       const bits = new BitSource(new Uint8Array(10));
       const spy = vi.spyOn(bits, "readBits");
 
-      skipAlphanumeric(bits, 2); // 11 bits
+      skipAlphanumeric(bits, 2); // 11 ビット
       expect(spy).toHaveBeenCalledWith(11);
 
-      skipAlphanumeric(bits, 1); // 6 bits
+      skipAlphanumeric(bits, 1); // 6 ビット
       expect(spy).toHaveBeenCalledWith(6);
     });
 
@@ -843,9 +845,9 @@ describe("decoderUtils", () => {
     });
 
     it("scanForKanjiMode should detect Kanji mode in bitstream", () => {
-      // Manual BitSource mock or real bits
+      // BitSource の手動モックまたは実ビット
       const version = Version.getVersionForNumber(1);
-      // Mode.KANJI is 0x8. For Version 1, Kanji count is 8 bits.
+      // Mode.KANJI は 0x8。Version 1 の場合、漢字カウントは 8 ビット。
       // Mode(4) + Count(8)
       // 1000 00000001 -> 0x80, 0x10
       const bytes = new Uint8Array([0x80, 0x10, 0x00]);
@@ -858,7 +860,7 @@ describe("decoderUtils", () => {
 
     it("scanForKanjiMode should return invalid for unknown mode", () => {
       const version = Version.getVersionForNumber(1);
-      const bytes = new Uint8Array([0x00]); // Terminator 0000
+      const bytes = new Uint8Array([0x00]); // ターミネータ 0000
       try {
         const result = scanForKanjiMode(bytes, version);
         expect(result.isValid).toBe(true);
@@ -888,16 +890,16 @@ describe("decoderUtils", () => {
       const sa = new Uint8Array([0x30, 0x00, 0x00, 0x00]);
       scanForKanjiMode(sa, version);
 
-      // ECI (0111) + ECI Value.
-      // 1 byte ECI (0-127): 0111 0xxxxxxx
+      // ECI (0111) + ECI 値。
+      // 1 バイト ECI (0-127): 0111 0xxxxxxx
       const eci1 = new Uint8Array([0x70, 0x01, 0x00]);
       scanForKanjiMode(eci1, version);
 
-      // 2 byte ECI: 0111 10xxxxxx xxxxxxxx
+      // 2 バイト ECI: 0111 10xxxxxx xxxxxxxx
       const eci2 = new Uint8Array([0x78, 0x01, 0x01, 0x00]);
       scanForKanjiMode(eci2, version);
 
-      // 3 byte ECI: 0111 110xxxxx xxxxxxxx xxxxxxxx
+      // 3 バイト ECI: 0111 110xxxxx xxxxxxxx xxxxxxxx
       const eci3 = new Uint8Array([0x7c, 0x01, 0x01, 0x01, 0x00]);
       scanForKanjiMode(eci3, version);
     });
@@ -905,40 +907,393 @@ describe("decoderUtils", () => {
     it("scanForKanjiMode should return invalid for various failure reasons", () => {
       const version = Version.getVersionForNumber(1);
 
-      // Structured Append too short
+      // Structured Append が短すぎる
       expect(scanForKanjiMode(new Uint8Array([0x30]), version).isValid).toBe(
         false,
       );
 
-      // ECI Value too short
+      // ECI 値が短すぎる
       expect(scanForKanjiMode(new Uint8Array([0x70]), version).isValid).toBe(
         false,
       );
 
-      // Hanzi count too short
+      // 漢字カウントが短すぎる
       expect(scanForKanjiMode(new Uint8Array([0xd0]), version).isValid).toBe(
         false,
       );
 
-      // Numeric too short
+      // 数字カウントが短すぎる
       expect(scanForKanjiMode(new Uint8Array([0x10]), version).isValid).toBe(
         false,
       );
 
-      // Alphanumeric too short
+      // 英数字カウントが短すぎる
       expect(scanForKanjiMode(new Uint8Array([0x20]), version).isValid).toBe(
         false,
       );
 
-      // Byte too short
+      // バイトカウントが短すぎる
       expect(scanForKanjiMode(new Uint8Array([0x40]), version).isValid).toBe(
         false,
       );
 
-      // Kanji too short
+      // 漢字カウントが短すぎる
       expect(scanForKanjiMode(new Uint8Array([0x80]), version).isValid).toBe(
         false,
       );
+    });
+  });
+
+  describe("decodeWithJsQR additional tests", () => {
+    it("should handle Shift-JIS when jsQR returns empty data but has binaryData", async () => {
+      // jsQR モック: data は空だが、SJIS の binaryData がある場合
+      const binaryData = [0x82, 0xa0]; // SJIS の "あ"
+      const mockResult = {
+        data: "",
+        binaryData: binaryData,
+        location: {
+          topLeftCorner: { x: 0, y: 0 },
+          topRightCorner: { x: 1, y: 0 },
+          bottomLeftCorner: { x: 0, y: 1 },
+          bottomRightCorner: { x: 1, y: 1 },
+        },
+      };
+
+      vi.mocked(jsQR).mockReturnValue(
+        mockResult as unknown as ReturnType<typeof jsQR>,
+      );
+
+      // canvas と context のモック
+      const mockContext = {
+        drawImage: vi.fn(),
+        getImageData: vi.fn().mockReturnValue({
+          data: new Uint8ClampedArray(40000),
+        }),
+      };
+      const mockCanvas = {
+        getContext: vi.fn().mockReturnValue(mockContext),
+        width: 100,
+        height: 100,
+      };
+      vi.stubGlobal("document", {
+        createElement: vi.fn().mockReturnValue(mockCanvas),
+      });
+
+      // UTF-8 は失敗し、SJIS は成功するように TextDecoder をモック
+      const originalTextDecoder = globalThis.TextDecoder;
+      globalThis.TextDecoder = class extends originalTextDecoder {
+        _label: string;
+        constructor(label: string, options?: TextDecoderOptions) {
+          super(label, options);
+          this._label = label;
+        }
+        decode(_input?: BufferSource, _options?: TextDecodeOptions): string {
+          if (this._label === "utf-8") {
+            throw new Error("UTF-8 fail");
+          }
+          if (this._label === "shift-jis") {
+            return "あ";
+          }
+          return super.decode(_input, _options);
+        }
+      } as unknown as typeof TextDecoder;
+
+      const mockImage = { width: 100, height: 100 } as HTMLImageElement;
+      const result = await decodeQrCode(mockImage, () => {});
+      expect(result).toEqual({ text: "あ", encoding: "Shift-JIS" });
+
+      globalThis.TextDecoder = originalTextDecoder;
+    });
+
+    it("should handle non-Japanese text with SJIS match in jsQR", async () => {
+      // 266-271行目: code.data !== "" && !/[\u3000-\u303f\u3040-\u309f\u30a0-\u30ff\uff00-\uffef\u4e00-\u9faf]/.test(code.data)
+      const mockResult = {
+        data: "abc", // 日本語文字なし
+        binaryData: [0x61, 0x62, 0x63], // "abc" の SJIS は ASCII と同じ
+        location: {
+          topLeftCorner: { x: 0, y: 0 },
+          topRightCorner: { x: 1, y: 0 },
+          bottomLeftCorner: { x: 0, y: 1 },
+          bottomRightCorner: { x: 1, y: 1 },
+        },
+      };
+
+      vi.mocked(jsQR).mockReturnValue(
+        mockResult as unknown as ReturnType<typeof jsQR>,
+      );
+
+      // canvas と context のモック
+      const mockContext = {
+        drawImage: vi.fn(),
+        getImageData: vi.fn().mockReturnValue({
+          data: new Uint8ClampedArray(40000),
+        }),
+      };
+      const mockCanvas = {
+        getContext: vi.fn().mockReturnValue(mockContext),
+        width: 100,
+        height: 100,
+      };
+      vi.stubGlobal("document", {
+        createElement: vi.fn().mockReturnValue(mockCanvas),
+      });
+
+      // SJIS に対して "abc" を返すように TextDecoder をモック
+      const originalTextDecoder = globalThis.TextDecoder;
+      globalThis.TextDecoder = class extends originalTextDecoder {
+        _label: string;
+        constructor(label: string, options?: TextDecoderOptions) {
+          super(label, options);
+          this._label = label;
+        }
+        decode(_input?: BufferSource, _options?: TextDecodeOptions): string {
+          if (this._label === "shift-jis") {
+            return "abc";
+          }
+          return super.decode(_input, _options);
+        }
+      } as unknown as typeof TextDecoder;
+
+      const mockImage = { width: 100, height: 100 } as HTMLImageElement;
+      const result = await decodeQrCode(mockImage, () => {});
+      // この場合、SJIS に一致し "Shift-JIS" エンコーディングを返すはず
+      expect(result).toEqual({ text: "abc", encoding: "Shift-JIS" });
+
+      globalThis.TextDecoder = originalTextDecoder;
+    });
+  });
+
+  describe("Encoding detection fallback paths", () => {
+    it("should detect Shift-JIS from rawBytes when UTF-8 doesn't match (lines 392-395)", async () => {
+      const mockResult = {
+        getText: () => "あ",
+        getRawBytes: () => new Uint8Array([0x82, 0xa0]), // SJIS "あ"
+        getResultMetadata: () => ({
+          get: () => null,
+        }),
+      };
+
+      vi.spyOn(MultiFormatReader.prototype, "decode").mockReturnValue(
+        mockResult as unknown as Result,
+      );
+
+      // canvas と context のモック
+      const mockContext = {
+        drawImage: vi.fn(),
+        getImageData: vi.fn().mockReturnValue({
+          data: new Uint8ClampedArray(40000),
+        }),
+      };
+      const mockCanvas = {
+        getContext: vi.fn().mockReturnValue(mockContext),
+        width: 100,
+        height: 100,
+      };
+      vi.stubGlobal("document", {
+        createElement: vi.fn().mockReturnValue(mockCanvas),
+      });
+
+      // UTF-8 は失敗し、SJIS は成功するように TextDecoder をモック
+      const originalTextDecoder = globalThis.TextDecoder;
+      globalThis.TextDecoder = class extends originalTextDecoder {
+        _label: string;
+        constructor(label: string, options?: TextDecoderOptions) {
+          super(label, options);
+          this._label = label;
+        }
+        decode(_input?: BufferSource, _options?: TextDecodeOptions): string {
+          if (this._label === "utf-8") {
+            return "wrong"; // "あ" ではない
+          }
+          if (this._label === "shift-jis") {
+            return "あ";
+          }
+          return super.decode(_input, _options);
+        }
+      } as unknown as typeof TextDecoder;
+
+      const mockImage = { width: 100, height: 100 } as HTMLImageElement;
+      const result = await decodeQrCode(mockImage, () => {});
+      expect(result?.encoding).toBe("Shift-JIS");
+
+      globalThis.TextDecoder = originalTextDecoder;
+    });
+
+    it("should detect UTF-8 from BYTE_SEGMENTS (lines 400-402)", async () => {
+      const mockResult = {
+        getText: () => "あ",
+        getRawBytes: () => new Uint8Array([1, 2, 3]), // ゴミ
+        getResultMetadata: () => ({
+          get: (type: ResultMetadataType) => {
+            if (type === ResultMetadataType.BYTE_SEGMENTS) {
+              return [new Uint8Array([0xe3, 0x81, 0x82])]; // UTF-8 "あ"
+            }
+            return null;
+          },
+        }),
+      };
+
+      vi.spyOn(MultiFormatReader.prototype, "decode").mockReturnValue(
+        mockResult as unknown as Result,
+      );
+
+      // canvas と context のモック
+      const mockContext = {
+        drawImage: vi.fn(),
+        getImageData: vi.fn().mockReturnValue({
+          data: new Uint8ClampedArray(40000),
+        }),
+      };
+      const mockCanvas = {
+        getContext: vi.fn().mockReturnValue(mockContext),
+        width: 100,
+        height: 100,
+      };
+      vi.stubGlobal("document", {
+        createElement: vi.fn().mockReturnValue(mockCanvas),
+      });
+
+      const originalTextDecoder = globalThis.TextDecoder;
+      globalThis.TextDecoder = class extends originalTextDecoder {
+        _label: string;
+        constructor(label: string, options?: TextDecoderOptions) {
+          super(label, options);
+          this._label = label;
+        }
+        decode(input?: BufferSource, _options?: TextDecodeOptions): string {
+          const bytes = new Uint8Array(input as ArrayBuffer);
+          if (bytes.length === 3 && bytes[0] === 1) return "wrong"; // rawBytes
+
+          if (
+            this._label === "utf-8" &&
+            bytes.length === 3 &&
+            bytes[0] === 0xe3
+          ) {
+            return "あ";
+          }
+          return "wrong";
+        }
+      } as unknown as typeof TextDecoder;
+
+      const mockImage = { width: 100, height: 100 } as HTMLImageElement;
+      const result = await decodeQrCode(mockImage, () => {});
+      expect(result?.encoding).toBe("UTF-8");
+
+      globalThis.TextDecoder = originalTextDecoder;
+    });
+
+    it("should detect Shift-JIS from BYTE_SEGMENTS (lines 404-406)", async () => {
+      const mockResult = {
+        getText: () => "あ",
+        getRawBytes: () => new Uint8Array([1, 2, 3]), // ゴミ
+        getResultMetadata: () => ({
+          get: (type: ResultMetadataType) => {
+            if (type === ResultMetadataType.BYTE_SEGMENTS) {
+              return [new Uint8Array([0x82, 0xa0])]; // SJIS "あ"
+            }
+            return null;
+          },
+        }),
+      };
+
+      vi.spyOn(MultiFormatReader.prototype, "decode").mockReturnValue(
+        mockResult as unknown as Result,
+      );
+
+      // canvas と context のモック
+      const mockContext = {
+        drawImage: vi.fn(),
+        getImageData: vi.fn().mockReturnValue({
+          data: new Uint8ClampedArray(40000),
+        }),
+      };
+      const mockCanvas = {
+        getContext: vi.fn().mockReturnValue(mockContext),
+        width: 100,
+        height: 100,
+      };
+      vi.stubGlobal("document", {
+        createElement: vi.fn().mockReturnValue(mockCanvas),
+      });
+
+      const originalTextDecoder = globalThis.TextDecoder;
+      globalThis.TextDecoder = class extends originalTextDecoder {
+        _label: string;
+        constructor(label: string, options?: TextDecoderOptions) {
+          super(label, options);
+          this._label = label;
+        }
+        decode(input?: BufferSource, _options?: TextDecodeOptions): string {
+          const bytes = new Uint8Array(input as ArrayBuffer);
+          if (bytes.length === 3 && bytes[0] === 1) return "wrong";
+
+          if (this._label === "utf-8") return "wrong";
+          if (
+            this._label === "shift-jis" &&
+            bytes.length === 2 &&
+            bytes[0] === 0x82
+          ) {
+            return "あ";
+          }
+          return "wrong";
+        }
+      } as unknown as typeof TextDecoder;
+
+      const mockImage = { width: 100, height: 100 } as HTMLImageElement;
+      const result = await decodeQrCode(mockImage, () => {});
+      expect(result?.encoding).toBe("Shift-JIS");
+
+      globalThis.TextDecoder = originalTextDecoder;
+    });
+
+    it("should decode empty ZXing text with Shift-JIS bytes (lines 421-426)", async () => {
+      const mockResult = {
+        getText: () => "",
+        getRawBytes: () => new Uint8Array([0x82, 0xa0]),
+        getResultMetadata: () => ({
+          get: () => null,
+        }),
+      };
+
+      vi.spyOn(MultiFormatReader.prototype, "decode").mockReturnValue(
+        mockResult as unknown as Result,
+      );
+
+      // canvas と context のモック
+      const mockContext = {
+        drawImage: vi.fn(),
+        getImageData: vi.fn().mockReturnValue({
+          data: new Uint8ClampedArray(40000),
+        }),
+      };
+      const mockCanvas = {
+        getContext: vi.fn().mockReturnValue(mockContext),
+        width: 100,
+        height: 100,
+      };
+      vi.stubGlobal("document", {
+        createElement: vi.fn().mockReturnValue(mockCanvas),
+      });
+
+      const originalTextDecoder = globalThis.TextDecoder;
+      globalThis.TextDecoder = class extends originalTextDecoder {
+        _label: string;
+        constructor(label: string, options?: TextDecoderOptions) {
+          super(label, options);
+          this._label = label;
+        }
+        decode(_input?: BufferSource, _options?: TextDecodeOptions): string {
+          if (this._label === "utf-8") throw new Error();
+          if (this._label === "shift-jis") return "あ";
+          return "";
+        }
+      } as unknown as typeof TextDecoder;
+
+      const mockImage = { width: 100, height: 100 } as HTMLImageElement;
+      const result = await decodeQrCode(mockImage, () => {});
+      expect(result).toEqual({ text: "あ", encoding: "Shift-JIS" });
+
+      globalThis.TextDecoder = originalTextDecoder;
     });
   });
 });

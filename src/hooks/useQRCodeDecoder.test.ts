@@ -18,7 +18,7 @@ interface MockFileReader {
   onerror: ((error: Error) => void) | null;
 }
 
-// Imageのグローバルモック
+// Image のグローバルモック
 let lastImageInstance: MockImage | null = null;
 class MockImage {
   onload: (() => Promise<void>) | null = null;
@@ -292,5 +292,33 @@ describe("useQRCodeDecoder", () => {
 
     expect(mockClipboard.writeText).toHaveBeenCalledWith("text to copy");
     expect(setCopyStatus).toHaveBeenCalledWith("Copied!");
+  });
+
+  it("should handle non-Error rejection during decode", async () => {
+    vi.mocked(useState)
+      .mockReturnValueOnce(["", setDecodedText])
+      .mockReturnValueOnce(["", setDecodedEncoding])
+      .mockReturnValueOnce(["", setDecodeStatus])
+      .mockReturnValueOnce(["", setCopyStatus]);
+
+    vi.mocked(decoderUtils.decodeQrCode).mockRejectedValue("string error");
+
+    const hook = useQRCodeDecoder();
+    const mockFile = { name: "test.png", type: "image/png" };
+    const mockEvent = {
+      target: { files: [mockFile] },
+    } as unknown as React.ChangeEvent<HTMLInputElement>;
+
+    hook.handleImageUpload(mockEvent);
+
+    const mockFileReader = (globalThis.FileReader as unknown as Mock).mock
+      .results[0].value as MockFileReader;
+    mockFileReader.onload?.({ target: { result: "data:..." } });
+
+    if (lastImageInstance?.onload) {
+      await lastImageInstance.onload();
+    }
+
+    expect(setDecodeStatus).toHaveBeenCalledWith("Error: string error");
   });
 });

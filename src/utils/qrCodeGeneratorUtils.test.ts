@@ -1,163 +1,233 @@
-import { describe, expect, it } from "vitest";
+import { Byte, Charset, Kanji } from "@nuintun/qrcode";
+import Encoding from "encoding-japanese";
+import { describe, expect, it, vi } from "vitest";
 
 import {
+  customShiftJISEncoder,
   encodeKanjiQRCode,
   isKanjiModeCompatible,
+  isShiftJISCompatible,
+  segmentText,
 } from "./qrCodeGeneratorUtils";
 
 describe("qrCodeGeneratorUtils", () => {
   describe("internal functions (via indirect testing)", () => {
     it("should handle mixed segments correctly", () => {
-      // "Aあ" should result in Byte and Kanji segments
+      // "Aあ" は Byte セグメントと Kanji セグメントになるはず
       const result = encodeKanjiQRCode("Aあ", true);
       expect(result.matrix).toBeDefined();
     });
 
     it("should handle non-SJIS characters by falling back to UTF-8 Byte segment", () => {
-      // Emoji is not SJIS compatible
+      // 絵文字は SJIS 互換ではない
       const result = encodeKanjiQRCode("🌟", true);
       expect(result.matrix).toBeDefined();
     });
 
     it("should handle half-width katakana in SJIS", () => {
-      // Half-width katakana is SJIS compatible but not Kanji mode
+      // 半角カタカナは SJIS 互換だが、漢字モードではない
       const result = encodeKanjiQRCode("ｱｲｳ", true);
       expect(result.matrix).toBeDefined();
     });
 
     it("should handle boundary cases in isShiftJISCompatible", () => {
-      // Half-width katakana is SJIS compatible
+      // 半角カタカナは SJIS 互換
       expect(encodeKanjiQRCode("ｱｲｳ", true)).toBeDefined();
     });
 
     it("should handle mixed segments correctly (indirect test of segmentText)", () => {
-      // Mixed mode A (ASCII) + あ (Kanji)
+      // 混合モード A (ASCII) + あ (漢字)
       const result = encodeKanjiQRCode("AあBい", true);
       expect(result.matrix).toBeDefined();
 
-      // Non-SJIS fallback test
+      // 非 SJIS フォールバックテスト
       expect(encodeKanjiQRCode("🌟", true)).toBeDefined();
     });
 
     it("should handle ShiftJIS edge cases in isShiftJISCompatible", () => {
-      // isShiftJISCompatible branch coverage
-      // Valid SJIS 2-byte ranges: 81-9F, E0-EF followed by 40-7E, 80-FC
+      // isShiftJISCompatible の分岐カバレッジ
+      // 有効な SJIS 2バイト範囲: 81-9F, E0-EF の後に 40-7E, 80-FC
 
-      // 0x81, 0x40 (Space)
+      // 0x81, 0x40 (全角スペース)
       expect(encodeKanjiQRCode("　", true)).toBeDefined();
 
-      // Test characters that hit the E0-EF range in isShiftJISCompatible
-      // "魁" (0xE0, 0x40 in SJIS) - use a safe one
+      // isShiftJISCompatible で E0-EF 範囲に該当する文字をテスト
+      // "魁" (SJIS で 0xE0, 0x40) - 安全な文字を使用
       expect(isKanjiModeCompatible("魁")).toBeDefined();
     });
 
     it("should handle customShiftJISEncoder via Kanji segment", () => {
-      // Encoding something that uses Kanji segment
+      // 漢字セグメントを使用するもののエンコード
       const result = encodeKanjiQRCode("漢字", false);
       expect(result.matrix).toBeDefined();
     });
 
     it("should handle mixed text with custom segments", () => {
-      // This will trigger different branches in segmentText
+      // segmentText の異なる分岐をトリガーする
       expect(encodeKanjiQRCode("AあBい", true)).toBeDefined();
       expect(encodeKanjiQRCode("あAいB", true)).toBeDefined();
 
-      // More mixed patterns
+      // その他の混合パターン
       expect(encodeKanjiQRCode("あA", true)).toBeDefined();
       expect(encodeKanjiQRCode("Aあ", true)).toBeDefined();
     });
 
     it("should throw error for invalid Kanji mode characters", () => {
-      // Use something that is not 2-byte SJIS Kanji mode compatible
+      // 2バイト SJIS 漢字モード互換でない文字を使用
       expect(() => encodeKanjiQRCode("A", false)).toThrow();
     });
 
     it("should handle UTF-8 fallback when not SJIS compatible", () => {
-      // Emoji should trigger the if (!isSJISChar) return [new Byte(text)];
+      // 絵文字は if (!isSJISChar) return [new Byte(text)]; をトリガーするはず
       const result = encodeKanjiQRCode("A🌟", true);
       expect(result.matrix).toBeDefined();
     });
 
-    it("isShiftJISCompatible should return false for invalid sequences", () => {
-      // isShiftJISCompatible is not exported, but we can hit it via segmentText -> encodeKanjiQRCode
-      // To trigger false, we need something that passes encoding-japanese SJIS conversion
-      // but fails the manual byte range check.
-      // This is tricky as encoding-japanese is quite robust.
-      // However, we can try to find characters that might result in 1-byte SJIS > 0x7F
-      // that are not katakana or valid 2-byte starts.
-    });
-
     it("should handle E0-EB range Shift_JIS characters", () => {
-      // "画" (0xE0, 0x89), "徴" (0xE0, 0xA5) - covers lines 39-52
+      // "画" (0xE0, 0x89), "徴" (0xE0, 0xA5) - 39-52行目をカバー
       const result = encodeKanjiQRCode("画徴", false);
       expect(result.matrix).toBeDefined();
     });
 
     it("should fall back to UTF-8 Byte mode for emoji", () => {
-      // Covers lines 145, 243-247
+      // 145, 243-247行目をカバー
       const result = encodeKanjiQRCode("Hello😀World", true);
       expect(result.matrix).toBeDefined();
     });
 
     it("should handle mixed emoji and Japanese text", () => {
-      // Covers lines 145, 243-247
+      // 145, 243-247行目をカバー
       const result = encodeKanjiQRCode("こんにちは😊世界", true);
       expect(result.matrix).toBeDefined();
     });
 
     it("should handle E0-EF range boundary characters", () => {
-      // "鷗鷲" - covers lines 111-125
+      // "鷗鷲" - 111-125行目をカバー
       const result = encodeKanjiQRCode("鷗鷲", true);
       expect(result.matrix).toBeDefined();
     });
 
     it("should handle half-width katakana mixed with kanji", () => {
-      // Half-width katakana (0xA1-0xDF range) mixed with kanji
+      // 半角カタカナ (0xA1-0xDF 範囲) と漢字の混合
       const result = encodeKanjiQRCode("ｱｲｳあいう", true);
       expect(result.matrix).toBeDefined();
     });
 
     it("should handle ASCII mixed with half-width katakana", () => {
-      // ASCII (0x00-0x7F) + half-width katakana (0xA1-0xDF)
+      // ASCII (0x00-0x7F) + 半角カタカナ (0xA1-0xDF)
       const result = encodeKanjiQRCode("ABCｱｲｳ", true);
       expect(result.matrix).toBeDefined();
     });
 
     it("should handle text with only half-width katakana", () => {
-      // Only half-width katakana
+      // 半角カタカナのみ
       const result = encodeKanjiQRCode("ｱｲｳｴｵ", true);
       expect(result.matrix).toBeDefined();
     });
 
     it("should handle 81-9F range Shift_JIS characters", () => {
-      // Characters in 0x81-0x9F range
-      // "亜" (0x88, 0x9F in SJIS)
+      // 0x81-0x9F 範囲の文字
+      // "亜" (SJIS で 0x88, 0x9F)
       const result = encodeKanjiQRCode("亜唖", false);
       expect(result.matrix).toBeDefined();
     });
 
     it("should handle mixed 81-9F and E0-EF range characters", () => {
-      // Mix of different Shift_JIS ranges
+      // 異なる Shift_JIS 範囲の混合
       const result = encodeKanjiQRCode("亜画鷗", true);
       expect(result.matrix).toBeDefined();
     });
 
     it("should handle ASCII boundary characters", () => {
-      // Test ASCII range (0x00-0x7F) boundaries
+      // ASCII 範囲 (0x00-0x7F) の境界値をテスト
       const result = encodeKanjiQRCode("A0Z9", true);
       expect(result.matrix).toBeDefined();
     });
 
     it("should handle mixed mode with numbers and Japanese", () => {
-      // Numbers + Japanese
+      // 数字 + 日本語
       const result = encodeKanjiQRCode("123あいう456", true);
       expect(result.matrix).toBeDefined();
     });
 
     it("should handle mixed mode with special characters", () => {
-      // Special ASCII characters + Japanese
+      // 特殊 ASCII 文字 + 日本語
       const result = encodeKanjiQRCode("!@#あいう$%^", true);
       expect(result.matrix).toBeDefined();
+    });
+  });
+
+  describe("isShiftJISCompatible direct tests", () => {
+    it("should return false when 0x81-0x9F byte has no second byte", () => {
+      vi.spyOn(Encoding, "convert").mockReturnValue([0x81]);
+      vi.spyOn(Encoding, "stringToCode").mockReturnValue([0x81]);
+      expect(isShiftJISCompatible("dummy")).toBe(false);
+      vi.restoreAllMocks();
+    });
+
+    it("should return false when 0x81-0x9F byte has invalid second byte", () => {
+      vi.spyOn(Encoding, "convert").mockReturnValue([0x81, 0x3f]);
+      expect(isShiftJISCompatible("dummy")).toBe(false);
+      vi.restoreAllMocks();
+    });
+
+    it("should return false when 0xE0-0xEF byte has no second byte", () => {
+      vi.spyOn(Encoding, "convert").mockReturnValue([0xe0]);
+      expect(isShiftJISCompatible("dummy")).toBe(false);
+      vi.restoreAllMocks();
+    });
+
+    it("should return false when 0xE0-0xEF byte has invalid second byte", () => {
+      vi.spyOn(Encoding, "convert").mockReturnValue([0xe0, 0xfd]);
+      expect(isShiftJISCompatible("dummy")).toBe(false);
+      vi.restoreAllMocks();
+    });
+
+    it("should return false for unsupported byte ranges", () => {
+      vi.spyOn(Encoding, "convert").mockReturnValue([0x80]);
+      expect(isShiftJISCompatible("dummy")).toBe(false);
+      vi.restoreAllMocks();
+    });
+
+    it("should return false for empty conversion result", () => {
+      vi.spyOn(Encoding, "convert").mockReturnValue([]);
+      expect(isShiftJISCompatible("dummy")).toBe(false);
+      vi.restoreAllMocks();
+    });
+  });
+
+  describe("customShiftJISEncoder direct tests", () => {
+    it("should fall back to TextEncoder for non-Shift_JIS charset", () => {
+      const result = customShiftJISEncoder("Hello", Charset.UTF_8);
+      expect(result).toEqual(new TextEncoder().encode("Hello"));
+    });
+  });
+
+  describe("segmentText direct tests", () => {
+    it("should handle empty string", () => {
+      expect(segmentText("")).toEqual([]);
+    });
+
+    it("should return a single Kanji segment for pure Kanji text", () => {
+      const segments = segmentText("漢字");
+      expect(segments).toHaveLength(1);
+      // 一部のバージョンでは @nuintun/qrcode の漢字セグメントはオブジェクト自体に直接 .mode.name を持たないため、
+      // コンストラクタや型をチェックする必要がある。
+      expect(segments[0]).toBeInstanceOf(Kanji);
+    });
+
+    it("should fall back to Byte segment for non-SJIS character", () => {
+      // 絵文字は通常 SJIS には含まれない
+      const segments = segmentText("A😊");
+      expect(segments).toHaveLength(1);
+      expect(segments[0]).toBeInstanceOf(Byte);
+    });
+
+    it("should handle mixed Kanji and SJIS Byte text", () => {
+      const segments = segmentText("Aあ");
+      expect(segments).toHaveLength(2);
+      expect(segments[0]).toBeInstanceOf(Byte);
+      expect(segments[1]).toBeInstanceOf(Kanji);
     });
   });
 
@@ -183,8 +253,8 @@ describe("qrCodeGeneratorUtils", () => {
     });
 
     it("should return false for non-Kanji 2-byte characters", () => {
-      // "㈱" is SJIS but not in pure Kanji mode range sometimes
-      // Let's test something that definitely triggers the catch block in isKanjiModeCompatible
+      // "㈱" は Shift_JIS ですが、純粋な漢字モードの範囲外になることがあります
+      // isKanjiModeCompatible 内の catch ブロックを確実に実行させるケースをテストします
       expect(isKanjiModeCompatible("A")).toBe(false);
     });
   });

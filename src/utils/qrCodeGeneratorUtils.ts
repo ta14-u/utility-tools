@@ -268,4 +268,13 @@ const encodeKanjiQRCode = (
   };
 };
 
-export { encodeKanjiQRCode, isKanjiModeCompatible };
+// TODO: isShiftJISCompatible, customShiftJISEncoder, segmentText は
+//       QRコード生成に特化した内部関数。テスタビリティのために暫定的に export しているが、
+//       将来的に汎用 Shift_JIS ユーティリティとして分離するか、テスト戦略を見直す際に再検討する。
+export {
+  encodeKanjiQRCode,
+  isKanjiModeCompatible,
+  isShiftJISCompatible,
+  customShiftJISEncoder,
+  segmentText,
+};
