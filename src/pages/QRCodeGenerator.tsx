@@ -203,7 +203,8 @@ const QRCodeGenerator = () => {
                 Generate in Kanji mode (Shift_JIS)
               </label>
               <div className="kanji-mode-hint">
-                Kanji mode supports Shift_JIS characters.
+                Recommended when the text contains Japanese (kanji, hiragana,
+                katakana). Encodes in Shift_JIS for efficient QR size.
               </div>
             </div>
           </div>
