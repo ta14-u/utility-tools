@@ -5,6 +5,7 @@ import { useQRCodeDecoder } from "./useQRCodeDecoder";
 
 vi.mock("react", () => ({
   useState: vi.fn(),
+  useCallback: (fn: unknown) => fn,
 }));
 
 vi.mock("../utils/qr/decode/decoder", () => ({

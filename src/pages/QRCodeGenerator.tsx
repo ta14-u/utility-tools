@@ -1,5 +1,6 @@
 import { QRCodeCanvas } from "qrcode.react";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useDropzone } from "react-dropzone";
 
 import { useQRCodeDecoder } from "../hooks/useQRCodeDecoder";
 import { useQRCodeGenerator } from "../hooks/useQRCodeGenerator";
@@ -18,6 +19,41 @@ type KanjiQRCodeCanvasProps = {
   size: number;
   canvasId: string;
 };
+
+const UploadIcon = () => (
+  <svg
+    width="32"
+    height="32"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#ccc"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+    <polyline points="17 8 12 3 7 8" />
+    <line x1="12" y1="3" x2="12" y2="15" />
+  </svg>
+);
+
+const PlusIcon = () => (
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+);
 
 const KanjiQRCodeCanvas = ({
   qrCodeMatrix,
@@ -81,9 +117,41 @@ const QRCodeGenerator = () => {
     decodedEncoding,
     decodeStatus,
     copyStatus,
-    handleImageUpload,
+    handleFiles,
+    handlePaste,
     handleCopy,
   } = useQRCodeDecoder();
+
+  const { getRootProps, getInputProps, open, isDragActive } = useDropzone({
+    accept: { "image/*": [] },
+    noClick: true,
+    noKeyboard: true,
+    maxFiles: 1,
+    onDrop: (acceptedFiles) => {
+      if (acceptedFiles[0]) {
+        handleFiles(acceptedFiles);
+      }
+    },
+  });
+
+  const dropZoneStyle = useMemo(
+    () => ({
+      border: `2px dashed ${isDragActive ? "#2196f3" : "#ccc"}`,
+      borderRadius: "8px",
+      padding: "16px 20px",
+      textAlign: "center" as const,
+      cursor: "pointer" as const,
+      backgroundColor: isDragActive ? "#e3f2fd" : "#fafafa",
+      marginBottom: "12px",
+      outline: "none" as const,
+      transition: "border-color 0.2s, background-color 0.2s",
+      display: "flex" as const,
+      flexDirection: "column" as const,
+      alignItems: "center" as const,
+      gap: "6px",
+    }),
+    [isDragActive],
+  );
 
   const downloadPNG = () => {
     const canvas = document.getElementById(QR_CODE_CANVAS_ID);
@@ -164,9 +232,93 @@ const QRCodeGenerator = () => {
 
       <hr />
 
-      <div className="decoder-container">
+      <div
+        className="decoder-container"
+        role="region"
+        aria-label="QR Code Decoder"
+      >
         <h2>QR Code Decoder</h2>
-        <input type="file" accept="image/*" onChange={handleImageUpload} />
+        <div
+          {...getRootProps()}
+          onPaste={handlePaste}
+          tabIndex={0}
+          role="button"
+          aria-label="Drop image, click + to select file, or press Ctrl+V to paste"
+          className="decoder-drop-zone"
+          style={dropZoneStyle}
+        >
+          <input {...getInputProps()} aria-hidden />
+
+          <div style={{ pointerEvents: "none" }}>
+            <UploadIcon />
+          </div>
+
+          <div style={{ color: "#666", fontSize: "0.9em" }}>
+            {isDragActive ? "Drop image here" : "Drag and drop image here"}
+          </div>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              open();
+            }}
+            aria-label="Select image file"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 12px",
+              borderRadius: "20px",
+              border: "1px solid #ccc",
+              backgroundColor: "#fff",
+              color: "#333",
+              fontSize: "0.95em",
+              cursor: "pointer",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+              transition: "background-color 0.2s",
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = "#f5f5f5";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = "#fff";
+            }}
+          >
+            <PlusIcon /> Select File
+          </button>
+
+          <div
+            style={{ marginTop: "4px", fontSize: "0.8em", color: "#888" }}
+          >
+            Or paste with{" "}
+            <kbd
+              style={{
+                backgroundColor: "#eee",
+                border: "1px solid #ccc",
+                borderRadius: "3px",
+                padding: "2px 4px",
+                fontFamily: "monospace",
+                margin: "0 2px",
+              }}
+            >
+              Ctrl
+            </kbd>{" "}
+            +{" "}
+            <kbd
+              style={{
+                backgroundColor: "#eee",
+                border: "1px solid #ccc",
+                borderRadius: "3px",
+                padding: "2px 4px",
+                fontFamily: "monospace",
+                margin: "0 2px",
+              }}
+            >
+              V
+            </kbd>
+          </div>
+        </div>
         {(decodeStatus || decodedText) && (
           <div className="decoded-result">
             <h3>
