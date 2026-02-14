@@ -1,5 +1,6 @@
 import { QRCodeCanvas } from "qrcode.react";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
+import { useDropzone } from "react-dropzone";
 
 import { useQRCodeDecoder } from "../hooks/useQRCodeDecoder";
 import { useQRCodeGenerator } from "../hooks/useQRCodeGenerator";
@@ -18,6 +19,42 @@ type KanjiQRCodeCanvasProps = {
   size: number;
   canvasId: string;
 };
+
+/** 画像を追加する（インポート）を表すアイコン：画像フレーム＋プラス */
+const AddImageIcon = () => (
+  <svg
+    width="32"
+    height="32"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="#ccc"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+    <line x1="12" y1="8" x2="12" y2="16" />
+    <line x1="8" y1="12" x2="16" y2="12" />
+  </svg>
+);
+
+const PlusIcon = () => (
+  <svg
+    width="20"
+    height="20"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+    aria-hidden="true"
+  >
+    <line x1="12" y1="5" x2="12" y2="19" />
+    <line x1="5" y1="12" x2="19" y2="12" />
+  </svg>
+);
 
 const KanjiQRCodeCanvas = ({
   qrCodeMatrix,
@@ -81,9 +118,41 @@ const QRCodeGenerator = () => {
     decodedEncoding,
     decodeStatus,
     copyStatus,
-    handleImageUpload,
+    handleFiles,
+    handlePaste,
     handleCopy,
   } = useQRCodeDecoder();
+
+  const { getRootProps, getInputProps, open, isDragActive } = useDropzone({
+    accept: { "image/*": [] },
+    noClick: true,
+    noKeyboard: true,
+    maxFiles: 1,
+    onDrop: (acceptedFiles) => {
+      if (acceptedFiles[0]) {
+        handleFiles(acceptedFiles);
+      }
+    },
+  });
+
+  const dropZoneStyle = useMemo(
+    () => ({
+      border: `2px dashed ${isDragActive ? "#2196f3" : "#ccc"}`,
+      borderRadius: "8px",
+      padding: "16px 20px",
+      textAlign: "center" as const,
+      cursor: "pointer" as const,
+      backgroundColor: isDragActive ? "#e3f2fd" : "#fafafa",
+      marginBottom: "12px",
+      outline: "none" as const,
+      transition: "border-color 0.2s, background-color 0.2s",
+      display: "flex" as const,
+      flexDirection: "column" as const,
+      alignItems: "center" as const,
+      gap: "6px",
+    }),
+    [isDragActive],
+  );
 
   const downloadPNG = () => {
     const canvas = document.getElementById(QR_CODE_CANVAS_ID);
@@ -109,32 +178,36 @@ const QRCodeGenerator = () => {
             onChange={(e) => setText(e.target.value)}
             placeholder="Enter text to generate QR code"
           />
-          <button type="button" onClick={handleGenerateQRCode}>
-            Generate
-          </button>
-        </div>
-        <label className="kanji-mode-option">
-          <input
-            type="checkbox"
-            checked={useKanjiMode}
-            onChange={(event) => setUseKanjiMode(event.target.checked)}
-          />
-          Generate in Kanji mode (Shift_JIS)
-        </label>
-        <div className="kanji-mode-hint">
-          Kanji mode supports Shift_JIS characters. Mixed mode (Kanji + ASCII)
-          is automatically enabled.
-        </div>
-        <div className="message-container">
-          {generateError ? (
-            <div className="error-message" style={{ color: "#cf1322" }}>
-              {generateError}
+          <div className="message-container">
+            {generateError ? (
+              <div className="error-message" style={{ color: "#cf1322" }}>
+                {generateError}
+              </div>
+            ) : (
+              <div className="capacity-hint" style={{ color: "#666" }}>
+                Maximum capacity: ~4,296 characters.
+              </div>
+            )}
+          </div>
+          <div className="generate-row">
+            <button type="button" onClick={handleGenerateQRCode}>
+              Generate
+            </button>
+            <div className="kanji-mode-group">
+              <label className="kanji-mode-option">
+                <input
+                  type="checkbox"
+                  checked={useKanjiMode}
+                  onChange={(event) => setUseKanjiMode(event.target.checked)}
+                />
+                Generate in Kanji mode (Shift_JIS)
+              </label>
+              <div className="kanji-mode-hint">
+                Recommended when the text contains Japanese (kanji, hiragana,
+                katakana). Encodes in Shift_JIS for efficient QR size.
+              </div>
             </div>
-          ) : (
-            <div className="capacity-hint" style={{ color: "#666" }}>
-              Maximum capacity: ~4,296 characters.
-            </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -164,9 +237,95 @@ const QRCodeGenerator = () => {
 
       <hr />
 
-      <div className="decoder-container">
+      <section className="decoder-container" aria-label="QR Code Decoder">
         <h2>QR Code Decoder</h2>
-        <input type="file" accept="image/*" onChange={handleImageUpload} />
+        {/* react-dropzone getRootProps() must be spread on a div for drag-drop */}
+        {/* biome-ignore lint/a11y/useSemanticElements: dropzone root is not focusable as button */}
+        <div
+          {...getRootProps()}
+          onPaste={handlePaste}
+          tabIndex={0}
+          role="button"
+          aria-label="Drop image, click + to select file, or press Ctrl+V to paste"
+          className="decoder-drop-zone"
+          style={dropZoneStyle}
+        >
+          <input {...getInputProps()} aria-hidden />
+
+          <div style={{ pointerEvents: "none" }}>
+            <AddImageIcon />
+          </div>
+
+          <div style={{ color: "#666", fontSize: "0.9em" }}>
+            {isDragActive ? "Drop image here" : "Drag and drop image here"}
+          </div>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              open();
+            }}
+            aria-label="Select image file"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              padding: "6px 12px",
+              borderRadius: "6px",
+              border: "1px solid #ccc",
+              backgroundColor: "#fff",
+              color: "#555",
+              fontSize: "0.95em",
+              cursor: "pointer",
+              boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
+              transition: "background-color 0.2s",
+            }}
+            onMouseOver={(e) => {
+              e.currentTarget.style.backgroundColor = "#f5f5f5";
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.backgroundColor = "#fff";
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.backgroundColor = "#f5f5f5";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.backgroundColor = "#fff";
+            }}
+          >
+            <PlusIcon /> Select File
+          </button>
+
+          <div style={{ marginTop: "4px", fontSize: "0.8em", color: "#888" }}>
+            Or click here and paste with{" "}
+            <kbd
+              style={{
+                backgroundColor: "#eee",
+                border: "1px solid #ccc",
+                borderRadius: "3px",
+                padding: "2px 4px",
+                fontFamily: "monospace",
+                margin: "0 2px",
+              }}
+            >
+              Ctrl(Cmd)
+            </kbd>{" "}
+            +{" "}
+            <kbd
+              style={{
+                backgroundColor: "#eee",
+                border: "1px solid #ccc",
+                borderRadius: "3px",
+                padding: "2px 4px",
+                fontFamily: "monospace",
+                margin: "0 2px",
+              }}
+            >
+              V
+            </kbd>
+          </div>
+        </div>
         {(decodeStatus || decodedText) && (
           <div className="decoded-result">
             <h3>
@@ -258,7 +417,7 @@ const QRCodeGenerator = () => {
             </div>
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 };

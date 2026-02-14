@@ -92,6 +92,7 @@ describe("qr/bitstream", () => {
 
       const result = scanForKanjiMode(bytes, version);
       expect(result.hasKanji).toBe(true);
+      expect(result.modes).toEqual(["KANJI"]);
       expect(result.isValid).toBe(true);
     });
 
@@ -199,6 +200,7 @@ describe("qr/bitstream", () => {
       const result = scanForKanjiMode(bytes, version);
       expect(result.isValid).toBe(true);
       expect(result.hasKanji).toBe(false);
+      expect(result.modes).toEqual(["BYTE"]);
     });
 
     it("should return invalid when BYTE mode data is insufficient", () => {
@@ -240,6 +242,7 @@ describe("qr/bitstream", () => {
       const result = scanForKanjiMode(bytes, version);
       expect(result.isValid).toBe(true);
       expect(result.hasKanji).toBe(false);
+      expect(result.modes).toEqual(["NUMERIC"]);
     });
 
     it("should handle ALPHANUMERIC mode segment correctly", () => {
@@ -255,6 +258,7 @@ describe("qr/bitstream", () => {
       const result = scanForKanjiMode(bytes, version);
       expect(result.isValid).toBe(true);
       expect(result.hasKanji).toBe(false);
+      expect(result.modes).toEqual(["ALPHANUMERIC"]);
     });
 
     it("should handle HANZI mode segment correctly", () => {
@@ -269,6 +273,7 @@ describe("qr/bitstream", () => {
       const result = scanForKanjiMode(bytes, version);
       expect(result.isValid).toBe(true);
       expect(result.hasKanji).toBe(false);
+      expect(result.modes).toEqual(["HANZI"]);
     });
 
     it("should stop scanning when bits are exhausted (normal end without terminator)", () => {
@@ -279,6 +284,7 @@ describe("qr/bitstream", () => {
       const result = scanForKanjiMode(bytes, version);
       expect(result.isValid).toBe(true);
       expect(result.hasKanji).toBe(false);
+      expect(result.modes).toEqual([]);
     });
   });
 });
