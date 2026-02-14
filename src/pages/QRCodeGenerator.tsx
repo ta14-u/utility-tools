@@ -20,7 +20,8 @@ type KanjiQRCodeCanvasProps = {
   canvasId: string;
 };
 
-const UploadIcon = () => (
+/** 画像を追加する（インポート）を表すアイコン：画像フレーム＋プラス */
+const AddImageIcon = () => (
   <svg
     width="32"
     height="32"
@@ -32,9 +33,9 @@ const UploadIcon = () => (
     strokeLinejoin="round"
     aria-hidden="true"
   >
-    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-    <polyline points="17 8 12 3 7 8" />
-    <line x1="12" y1="3" x2="12" y2="15" />
+    <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+    <line x1="12" y1="8" x2="12" y2="16" />
+    <line x1="8" y1="12" x2="16" y2="12" />
   </svg>
 );
 
@@ -177,32 +178,35 @@ const QRCodeGenerator = () => {
             onChange={(e) => setText(e.target.value)}
             placeholder="Enter text to generate QR code"
           />
-          <button type="button" onClick={handleGenerateQRCode}>
-            Generate
-          </button>
-        </div>
-        <label className="kanji-mode-option">
-          <input
-            type="checkbox"
-            checked={useKanjiMode}
-            onChange={(event) => setUseKanjiMode(event.target.checked)}
-          />
-          Generate in Kanji mode (Shift_JIS)
-        </label>
-        <div className="kanji-mode-hint">
-          Kanji mode supports Shift_JIS characters. Mixed mode (Kanji + ASCII)
-          is automatically enabled.
-        </div>
-        <div className="message-container">
-          {generateError ? (
-            <div className="error-message" style={{ color: "#cf1322" }}>
-              {generateError}
+          <div className="message-container">
+            {generateError ? (
+              <div className="error-message" style={{ color: "#cf1322" }}>
+                {generateError}
+              </div>
+            ) : (
+              <div className="capacity-hint" style={{ color: "#666" }}>
+                Maximum capacity: ~4,296 characters.
+              </div>
+            )}
+          </div>
+          <div className="generate-row">
+            <button type="button" onClick={handleGenerateQRCode}>
+              Generate
+            </button>
+            <div className="kanji-mode-group">
+              <label className="kanji-mode-option">
+                <input
+                  type="checkbox"
+                  checked={useKanjiMode}
+                  onChange={(event) => setUseKanjiMode(event.target.checked)}
+                />
+                Generate in Kanji mode (Shift_JIS)
+              </label>
+              <div className="kanji-mode-hint">
+                Kanji mode supports Shift_JIS characters.
+              </div>
             </div>
-          ) : (
-            <div className="capacity-hint" style={{ color: "#666" }}>
-              Maximum capacity: ~4,296 characters.
-            </div>
-          )}
+          </div>
         </div>
       </div>
 
@@ -250,7 +254,7 @@ const QRCodeGenerator = () => {
           <input {...getInputProps()} aria-hidden />
 
           <div style={{ pointerEvents: "none" }}>
-            <UploadIcon />
+            <AddImageIcon />
           </div>
 
           <div style={{ color: "#666", fontSize: "0.9em" }}>
@@ -269,10 +273,10 @@ const QRCodeGenerator = () => {
               alignItems: "center",
               gap: "6px",
               padding: "6px 12px",
-              borderRadius: "20px",
+              borderRadius: "6px",
               border: "1px solid #ccc",
               backgroundColor: "#fff",
-              color: "#333",
+              color: "#555",
               fontSize: "0.95em",
               cursor: "pointer",
               boxShadow: "0 2px 4px rgba(0,0,0,0.05)",
@@ -291,7 +295,7 @@ const QRCodeGenerator = () => {
           <div
             style={{ marginTop: "4px", fontSize: "0.8em", color: "#888" }}
           >
-            Or paste with{" "}
+            Or click here and paste with{" "}
             <kbd
               style={{
                 backgroundColor: "#eee",
@@ -302,7 +306,7 @@ const QRCodeGenerator = () => {
                 margin: "0 2px",
               }}
             >
-              Ctrl
+              Ctrl(Cmd)
             </kbd>{" "}
             +{" "}
             <kbd

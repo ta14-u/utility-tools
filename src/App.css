@@ -87,17 +87,36 @@
 
 .input-container {
   display: flex;
+  flex-direction: column;
   align-items: flex-start;
   gap: 1rem;
   width: 100%;
+}
+
+.generate-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.5rem;
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+.generate-row button {
+  flex-shrink: 0;
+}
+
+.kanji-mode-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+  flex: 1;
 }
 
 .kanji-mode-option {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  width: 100%;
-  margin-top: 0.75rem;
   font-size: 0.9rem;
   justify-content: flex-start;
 }
@@ -107,11 +126,9 @@
 }
 
 .kanji-mode-hint {
-  width: 100%;
   text-align: left;
   font-size: 0.75rem;
   color: #666;
-  margin-top: 0.25rem;
 }
 
 .message-container {
@@ -122,16 +139,18 @@
 }
 
 .input-container textarea {
-  flex: 1;
+  width: 100%;
   padding: 0.5rem;
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 1rem;
   min-height: 100px;
   resize: vertical;
+  box-sizing: border-box;
 }
 
-.input-container button {
+.input-container button,
+.generate-row button {
   padding: 0.5rem 1rem;
   background-color: #3740c0;
   color: white;
@@ -148,11 +167,14 @@
 }
 
 .input-container button:hover,
-.input-container button:focus {
+.input-container button:focus,
+.generate-row button:hover,
+.generate-row button:focus {
   background-color: #2a3099;
 }
 
-.input-container button:focus {
+.input-container button:focus,
+.generate-row button:focus {
   outline: 3px solid #90caf9;
   outline-offset: 2px;
 }
