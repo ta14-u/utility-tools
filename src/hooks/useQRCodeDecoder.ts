@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import { decodeQrCode } from "../utils/decoderUtils";
+import { decodeQrCode } from "../utils/qr/decode/decoder";
 
 const useQRCodeDecoder = () => {
   const [decodedText, setDecodedText] = useState("");

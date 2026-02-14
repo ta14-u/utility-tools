@@ -1,14 +1,18 @@
 import { useState } from "react";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
-import * as qrUtils from "../utils/qrCodeGeneratorUtils";
+import * as encodeUtils from "../utils/qr/encode/kanji";
+import * as shiftjisUtils from "../utils/qr/shiftjis";
 import { useQRCodeGenerator } from "./useQRCodeGenerator";
 
 vi.mock("react", () => ({
   useState: vi.fn(),
 }));
 
-vi.mock("../utils/qrCodeGeneratorUtils", () => ({
+vi.mock("../utils/qr/encode/kanji", () => ({
   encodeKanjiQRCode: vi.fn(),
+}));
+
+vi.mock("../utils/qr/shiftjis", () => ({
   isKanjiModeCompatible: vi.fn(),
 }));
 
@@ -46,8 +50,8 @@ describe("useQRCodeGenerator", () => {
 
   it("should generate QR code in Kanji mode", () => {
     const mockMatrix = { matrix: [[1]], size: 1 };
-    vi.mocked(qrUtils.isKanjiModeCompatible).mockReturnValue(true);
-    vi.mocked(qrUtils.encodeKanjiQRCode).mockReturnValue(mockMatrix);
+    vi.mocked(shiftjisUtils.isKanjiModeCompatible).mockReturnValue(true);
+    vi.mocked(encodeUtils.encodeKanjiQRCode).mockReturnValue(mockMatrix);
 
     vi.mocked(useState)
       .mockReturnValueOnce(["日本語", setText])
@@ -60,8 +64,8 @@ describe("useQRCodeGenerator", () => {
     hook.handleGenerateQRCode();
 
     expect(setGenerateError).toHaveBeenCalledWith("");
-    expect(qrUtils.isKanjiModeCompatible).toHaveBeenCalledWith("日本語");
-    expect(qrUtils.encodeKanjiQRCode).toHaveBeenCalledWith("日本語", false);
+    expect(shiftjisUtils.isKanjiModeCompatible).toHaveBeenCalledWith("日本語");
+    expect(encodeUtils.encodeKanjiQRCode).toHaveBeenCalledWith("日本語", false);
     expect(setQrCodeMatrix).toHaveBeenCalledWith(mockMatrix);
   });
 
@@ -85,8 +89,8 @@ describe("useQRCodeGenerator", () => {
   });
 
   it("should handle error during generation", () => {
-    vi.mocked(qrUtils.isKanjiModeCompatible).mockReturnValue(true);
-    vi.mocked(qrUtils.encodeKanjiQRCode).mockImplementation(() => {
+    vi.mocked(shiftjisUtils.isKanjiModeCompatible).mockReturnValue(true);
+    vi.mocked(encodeUtils.encodeKanjiQRCode).mockImplementation(() => {
       throw new Error("generation failed");
     });
 
@@ -106,8 +110,8 @@ describe("useQRCodeGenerator", () => {
   });
 
   it("should handle non-Error throw in Kanji mode", () => {
-    vi.mocked(qrUtils.isKanjiModeCompatible).mockReturnValue(true);
-    vi.mocked(qrUtils.encodeKanjiQRCode).mockImplementation(() => {
+    vi.mocked(shiftjisUtils.isKanjiModeCompatible).mockReturnValue(true);
+    vi.mocked(encodeUtils.encodeKanjiQRCode).mockImplementation(() => {
       throw "string error";
     });
 

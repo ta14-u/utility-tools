@@ -1,13 +1,13 @@
 import { useState } from "react";
 import { beforeEach, describe, expect, it, type Mock, vi } from "vitest";
-import * as decoderUtils from "../utils/decoderUtils";
+import * as decoderUtils from "../utils/qr/decode/decoder";
 import { useQRCodeDecoder } from "./useQRCodeDecoder";
 
 vi.mock("react", () => ({
   useState: vi.fn(),
 }));
 
-vi.mock("../utils/decoderUtils", () => ({
+vi.mock("../utils/qr/decode/decoder", () => ({
   decodeQrCode: vi.fn(),
 }));
 
