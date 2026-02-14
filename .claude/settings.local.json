@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm test:*)",
+      "Bash(pnpm biome:ci:*)",
+      "Bash(pnpm biome check:*)",
+      "Bash(pnpm build:*)",
+      "Bash(pnpm vitest run:*)",
+      "Bash(pnpm biome format:*)",
+      "Bash(pnpm biome lint:*)"
+    ]
+  }
+}
