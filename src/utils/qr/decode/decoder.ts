@@ -6,6 +6,7 @@ import {
 } from "@zxing/library";
 import BitMatrixParser from "@zxing/library/esm/core/qrcode/decoder/BitMatrixParser";
 import DecodedBitStreamParser from "@zxing/library/esm/core/qrcode/decoder/DecodedBitStreamParser";
+import Version from "@zxing/library/esm/core/qrcode/decoder/Version";
 import Detector from "@zxing/library/esm/core/qrcode/detector/Detector";
 import type { DataSegmentMode } from "../bitstream";
 import { scanForKanjiMode } from "../bitstream";
@@ -110,6 +111,28 @@ const performDecode = async (
           }
         }
       } catch {}
+
+      // Detector 失敗等で scanResult が取れなかった場合、rawBytes のみでモード解析を試行（複数バージョンでフォールバック）
+      if (
+        scanResult === null &&
+        rawBytes &&
+        rawBytes.length > 0
+      ) {
+        for (const v of [1, 10, 27]) {
+          try {
+            const fallbackScan = scanForKanjiMode(
+              rawBytes,
+              Version.getVersionForNumber(v),
+            );
+            if (fallbackScan.isValid) {
+              scanResult = fallbackScan;
+              break;
+            }
+          } catch {
+            // 次のバージョンを試す
+          }
+        }
+      }
     }
 
     // 漢字モードでない場合、セグメントモードに応じて表示用 encoding を設定
@@ -131,14 +154,27 @@ const performDecode = async (
       encoding = detectEncoding(byteSegmentsBytes, decoded);
     }
 
-    // Byte モードのみの場合は「(Byte mode)」を付けて判別しやすくする
-    if (
+    // Byte モードのみの場合は「(Byte mode)」を付けて判別しやすくする（単一・複数セグメント両方）
+    const isByteModeOnly =
       scanResult?.isValid &&
-      scanResult.modes.length === 1 &&
-      scanResult.modes[0] === "BYTE" &&
-      (encoding === "UTF-8" || encoding === "Shift-JIS")
+      scanResult.modes.length >= 1 &&
+      scanResult.modes.every((m) => m === "BYTE");
+    if (isByteModeOnly) {
+      if (encoding === "UTF-8" || encoding === "Shift-JIS") {
+        encoding = `${encoding} (Byte mode)`;
+      } else if (encoding === "Unknown") {
+        encoding = "Unknown (Byte mode)";
+      }
+    }
+
+    // デコードは成功しているが encoding がまだ Unknown の場合は、Byte モードとみなして表示する（多くのテキストQRは Byte モード）
+    if (
+      encoding === "Unknown" &&
+      decoded.length > 0 &&
+      rawBytes &&
+      rawBytes.length > 0
     ) {
-      encoding = `${encoding} (Byte mode)`;
+      encoding = "Unknown (Byte mode)";
     }
 
     if (decoded === "" && rawBytes && rawBytes.length > 0) {
