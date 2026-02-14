@@ -20,7 +20,7 @@ import jsQR from "jsqr";
 type DecodeResult = { text: string; encoding: string };
 type StatusHandler = (status: string) => void;
 
-const joinByteSegments = (segments: Uint8Array[]) => {
+export const joinByteSegments = (segments: Uint8Array[]) => {
   const totalLength = segments.reduce(
     (sum, segment) => sum + segment.length,
     0,
@@ -34,7 +34,11 @@ const joinByteSegments = (segments: Uint8Array[]) => {
   return joined;
 };
 
-const tryDecode = (bytes: Uint8Array | null, label: string, fatal: boolean) => {
+export const tryDecode = (
+  bytes: Uint8Array | null,
+  label: string,
+  fatal: boolean,
+) => {
   if (!bytes || bytes.length === 0) {
     return null;
   }
@@ -45,7 +49,7 @@ const tryDecode = (bytes: Uint8Array | null, label: string, fatal: boolean) => {
   }
 };
 
-const parseECIValue = (bits: BitSource) => {
+export const parseECIValue = (bits: BitSource) => {
   if (bits.available() < 8) {
     return null;
   }
@@ -70,7 +74,7 @@ const parseECIValue = (bits: BitSource) => {
   return null;
 };
 
-const skipNumeric = (bits: BitSource, count: number) => {
+export const skipNumeric = (bits: BitSource, count: number) => {
   while (count >= 3) {
     bits.readBits(10);
     count -= 3;
@@ -82,7 +86,7 @@ const skipNumeric = (bits: BitSource, count: number) => {
   }
 };
 
-const skipAlphanumeric = (bits: BitSource, count: number) => {
+export const skipAlphanumeric = (bits: BitSource, count: number) => {
   while (count > 1) {
     bits.readBits(11);
     count -= 2;
@@ -92,7 +96,7 @@ const skipAlphanumeric = (bits: BitSource, count: number) => {
   }
 };
 
-const skipBits = (bits: BitSource, totalBits: number) => {
+export const skipBits = (bits: BitSource, totalBits: number) => {
   let remaining = totalBits;
   while (remaining > 0) {
     const toRead = Math.min(32, remaining);
@@ -101,7 +105,7 @@ const skipBits = (bits: BitSource, totalBits: number) => {
   }
 };
 
-const scanForKanjiMode = (bytes: Uint8Array, version: Version) => {
+export const scanForKanjiMode = (bytes: Uint8Array, version: Version) => {
   const bits = new BitSource(bytes);
   let hasKanji = false;
   let isValid = true;

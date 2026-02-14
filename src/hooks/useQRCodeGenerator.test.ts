@@ -83,4 +83,25 @@ describe("useQRCodeGenerator", () => {
     expect(setQrCodeText).toHaveBeenCalledWith("");
     expect(setQrCodeMatrix).toHaveBeenCalledWith(null);
   });
+
+  it("should handle error during generation", () => {
+    vi.mocked(qrUtils.isKanjiModeCompatible).mockReturnValue(true);
+    vi.mocked(qrUtils.encodeKanjiQRCode).mockImplementation(() => {
+      throw new Error("generation failed");
+    });
+
+    vi.mocked(useState)
+      .mockReturnValueOnce(["日本語", setText])
+      .mockReturnValueOnce(["", setQrCodeText])
+      .mockReturnValueOnce([null, setQrCodeMatrix])
+      .mockReturnValueOnce(["", setGenerateError])
+      .mockReturnValueOnce([true, setUseKanjiMode]);
+
+    const hook = useQRCodeGenerator();
+    hook.handleGenerateQRCode();
+
+    expect(setGenerateError).toHaveBeenCalledWith("generation failed");
+    expect(setQrCodeText).toHaveBeenCalledWith("");
+    expect(setQrCodeMatrix).toHaveBeenCalledWith(null);
+  });
 });
