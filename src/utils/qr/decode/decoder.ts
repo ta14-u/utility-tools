@@ -7,6 +7,7 @@ import {
 import BitMatrixParser from "@zxing/library/esm/core/qrcode/decoder/BitMatrixParser";
 import DecodedBitStreamParser from "@zxing/library/esm/core/qrcode/decoder/DecodedBitStreamParser";
 import Detector from "@zxing/library/esm/core/qrcode/detector/Detector";
+import type { DataSegmentMode } from "../bitstream";
 import { scanForKanjiMode } from "../bitstream";
 import { detectEncoding, joinByteSegments } from "../encoding";
 import type { DecodeResult, StatusHandler } from "../types";
@@ -79,7 +80,13 @@ const performDecode = async (
       ? joinByteSegments(byteSegments)
       : null;
 
-    // 最初に漢字モードをチェック（最優先）
+    let scanResult: {
+      hasKanji: boolean;
+      modes: DataSegmentMode[];
+      isValid: boolean;
+    } | null = null;
+
+    // ビットストリームからセグメントモードを取得（漢字・英数字・バイト等の判別に利用）
     if (rawBytes && rawBytes.length > 0) {
       try {
         const detectorResult = new Detector(bitmap.getBlackMatrix()).detect(
@@ -90,7 +97,7 @@ const performDecode = async (
         const ecLevel = parser
           .readFormatInformation()
           .getErrorCorrectionLevel();
-        const scanResult = scanForKanjiMode(rawBytes, version);
+        scanResult = scanForKanjiMode(rawBytes, version);
         const decodedFromRaw = DecodedBitStreamParser.decode(
           rawBytes,
           version,
@@ -105,13 +112,33 @@ const performDecode = async (
       } catch {}
     }
 
-    // 漢字モードでない場合、統合されたdetectEncodingを使用してUTF-8とShift-JISを検出
+    // 漢字モードでない場合、セグメントモードに応じて表示用 encoding を設定
+    if (encoding === "Unknown" && scanResult?.isValid && scanResult.modes) {
+      const modes = scanResult.modes;
+      if (modes.length === 1 && modes[0] === "ALPHANUMERIC") {
+        encoding = "Alphanumeric mode";
+      } else if (modes.length === 1 && modes[0] === "NUMERIC") {
+        encoding = "Numeric mode";
+      }
+    }
+
+    // 上記で決まらなかった場合、detectEncoding で UTF-8 / Shift-JIS を検出
     if (encoding === "Unknown" && rawBytes && rawBytes.length > 0) {
       encoding = detectEncoding(rawBytes, decoded);
     }
 
     if (encoding === "Unknown" && byteSegmentsBytes) {
       encoding = detectEncoding(byteSegmentsBytes, decoded);
+    }
+
+    // Byte モードのみの場合は「(Byte mode)」を付けて判別しやすくする
+    if (
+      scanResult?.isValid &&
+      scanResult.modes.length === 1 &&
+      scanResult.modes[0] === "BYTE" &&
+      (encoding === "UTF-8" || encoding === "Shift-JIS")
+    ) {
+      encoding = `${encoding} (Byte mode)`;
     }
 
     if (decoded === "" && rawBytes && rawBytes.length > 0) {
