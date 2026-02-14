@@ -237,12 +237,10 @@ const QRCodeGenerator = () => {
 
       <hr />
 
-      <div
-        className="decoder-container"
-        role="region"
-        aria-label="QR Code Decoder"
-      >
+      <section className="decoder-container" aria-label="QR Code Decoder">
         <h2>QR Code Decoder</h2>
+        {/* react-dropzone getRootProps() must be spread on a div for drag-drop */}
+        {/* biome-ignore lint/a11y/useSemanticElements: dropzone root is not focusable as button */}
         <div
           {...getRootProps()}
           onPaste={handlePaste}
@@ -289,13 +287,17 @@ const QRCodeGenerator = () => {
             onMouseOut={(e) => {
               e.currentTarget.style.backgroundColor = "#fff";
             }}
+            onFocus={(e) => {
+              e.currentTarget.style.backgroundColor = "#f5f5f5";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.backgroundColor = "#fff";
+            }}
           >
             <PlusIcon /> Select File
           </button>
 
-          <div
-            style={{ marginTop: "4px", fontSize: "0.8em", color: "#888" }}
-          >
+          <div style={{ marginTop: "4px", fontSize: "0.8em", color: "#888" }}>
             Or click here and paste with{" "}
             <kbd
               style={{
@@ -415,7 +417,7 @@ const QRCodeGenerator = () => {
             </div>
           </div>
         )}
-      </div>
+      </section>
     </div>
   );
 };

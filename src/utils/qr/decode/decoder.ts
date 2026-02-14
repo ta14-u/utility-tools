@@ -113,11 +113,7 @@ const performDecode = async (
       } catch {}
 
       // Detector 失敗等で scanResult が取れなかった場合、rawBytes のみでモード解析を試行（複数バージョンでフォールバック）
-      if (
-        scanResult === null &&
-        rawBytes &&
-        rawBytes.length > 0
-      ) {
+      if (scanResult === null && rawBytes && rawBytes.length > 0) {
         for (const v of [1, 10, 27]) {
           try {
             const fallbackScan = scanForKanjiMode(

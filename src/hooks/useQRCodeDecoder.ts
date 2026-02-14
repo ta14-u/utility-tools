@@ -60,17 +60,9 @@ const useQRCodeDecoder = () => {
   const [decodeStatus, setDecodeStatus] = useState("");
   const [copyStatus, setCopyStatus] = useState("");
 
-  const processFile = useCallback(
-    (file: File) => {
-      processImageFile(
-        file,
-        setDecodedText,
-        setDecodedEncoding,
-        setDecodeStatus,
-      );
-    },
-    [],
-  );
+  const processFile = useCallback((file: File) => {
+    processImageFile(file, setDecodedText, setDecodedEncoding, setDecodeStatus);
+  }, []);
 
   const handleImageUpload = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,39 +113,39 @@ const useQRCodeDecoder = () => {
       navigator.clipboard
         .read()
         .then(async (items) => {
-        const types = Array.from(items);
-        for (const item of types) {
-          const itemTypes = Array.from(item.types);
-          for (const type of itemTypes) {
-            try {
-              const blob = await item.getType(type);
-              const mime = (blob.type || type).toLowerCase();
-              if (mime.startsWith("image/")) {
-                const file = new File([blob], "image.png", {
-                  type: blob.type || "image/png",
-                });
-                processFile(file);
-                return;
+          const types = Array.from(items);
+          for (const item of types) {
+            const itemTypes = Array.from(item.types);
+            for (const type of itemTypes) {
+              try {
+                const blob = await item.getType(type);
+                const mime = (blob.type || type).toLowerCase();
+                if (mime.startsWith("image/")) {
+                  const file = new File([blob], "image.png", {
+                    type: blob.type || "image/png",
+                  });
+                  processFile(file);
+                  return;
+                }
+              } catch {
+                // Skip types that fail to retrieve (e.g. unsupported)
               }
-            } catch {
-              // Skip types that fail to retrieve (e.g. unsupported)
             }
           }
-        }
-        setDecodeStatus("No image in clipboard.");
-      })
-      .catch((err) => {
-        console.error("Clipboard read error:", err);
-        if (err instanceof Error && err.name === "NotAllowedError") {
-          setDecodeStatus(
-            "Clipboard access denied. Please allow access when prompted, or select/drop an image.",
-          );
-        } else {
-          setDecodeStatus(
-            `Error: ${err instanceof Error ? err.message : String(err)}`,
-          );
-        }
-      });
+          setDecodeStatus("No image in clipboard.");
+        })
+        .catch((err) => {
+          console.error("Clipboard read error:", err);
+          if (err instanceof Error && err.name === "NotAllowedError") {
+            setDecodeStatus(
+              "Clipboard access denied. Please allow access when prompted, or select/drop an image.",
+            );
+          } else {
+            setDecodeStatus(
+              `Error: ${err instanceof Error ? err.message : String(err)}`,
+            );
+          }
+        });
     };
 
     document.body.focus();

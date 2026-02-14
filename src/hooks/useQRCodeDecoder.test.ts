@@ -322,4 +322,322 @@ describe("useQRCodeDecoder", () => {
 
     expect(setDecodeStatus).toHaveBeenCalledWith("Error: string error");
   });
+
+  it("should call processFile on handleDrop with image file", async () => {
+    vi.mocked(useState)
+      .mockReturnValueOnce(["", setDecodedText])
+      .mockReturnValueOnce(["", setDecodedEncoding])
+      .mockReturnValueOnce(["", setDecodeStatus])
+      .mockReturnValueOnce(["", setCopyStatus]);
+
+    vi.mocked(decoderUtils.decodeQrCode).mockResolvedValue({
+      text: "dropped",
+      encoding: "UTF-8",
+    });
+
+    const mockFileReader: MockFileReader = {
+      readAsDataURL: vi.fn(),
+      onload: null,
+      onerror: null,
+    };
+    const FileReaderCtor = vi.fn().mockImplementation(function (this: unknown) {
+      return mockFileReader;
+    });
+    vi.stubGlobal("FileReader", FileReaderCtor);
+
+    const hook = useQRCodeDecoder();
+    const mockFile = { name: "drop.png", type: "image/png" } as File;
+    const mockEvent = {
+      dataTransfer: { files: [mockFile] },
+      preventDefault: vi.fn(),
+    } as unknown as React.DragEvent;
+
+    hook.handleDrop(mockEvent);
+
+    expect(mockEvent.preventDefault).toHaveBeenCalled();
+    expect(mockFileReader.readAsDataURL).toHaveBeenCalledWith(mockFile);
+    mockFileReader.onload?.({
+      target: { result: "data:image/png;base64,..." },
+    });
+    if (lastImageInstance?.onload) {
+      await lastImageInstance.onload();
+    }
+    expect(setDecodedText).toHaveBeenCalledWith("dropped");
+  });
+
+  it("should not call processFile on handleDrop with non-image file", () => {
+    vi.mocked(useState)
+      .mockReturnValueOnce(["", setDecodedText])
+      .mockReturnValueOnce(["", setDecodedEncoding])
+      .mockReturnValueOnce(["", setDecodeStatus])
+      .mockReturnValueOnce(["", setCopyStatus]);
+
+    const FileReaderCtor = vi.fn();
+    vi.stubGlobal("FileReader", FileReaderCtor);
+
+    const hook = useQRCodeDecoder();
+    const mockFile = { name: "doc.pdf", type: "application/pdf" } as File;
+    const mockEvent = {
+      dataTransfer: { files: [mockFile] },
+      preventDefault: vi.fn(),
+    } as unknown as React.DragEvent;
+
+    hook.handleDrop(mockEvent);
+
+    expect(mockEvent.preventDefault).not.toHaveBeenCalled();
+    expect(FileReaderCtor).not.toHaveBeenCalled();
+  });
+
+  it("should call processFile on handleFiles when acceptedFiles contains image", async () => {
+    vi.mocked(useState)
+      .mockReturnValueOnce(["", setDecodedText])
+      .mockReturnValueOnce(["", setDecodedEncoding])
+      .mockReturnValueOnce(["", setDecodeStatus])
+      .mockReturnValueOnce(["", setCopyStatus]);
+
+    vi.mocked(decoderUtils.decodeQrCode).mockResolvedValue({
+      text: "from files",
+      encoding: "UTF-8",
+    });
+
+    const mockFileReader: MockFileReader = {
+      readAsDataURL: vi.fn(),
+      onload: null,
+      onerror: null,
+    };
+    vi.stubGlobal(
+      "FileReader",
+      vi.fn().mockImplementation(function (this: unknown) {
+        return mockFileReader;
+      }),
+    );
+
+    const hook = useQRCodeDecoder();
+    const imageFile = { name: "a.png", type: "image/png" } as File;
+    hook.handleFiles([imageFile]);
+
+    expect(mockFileReader.readAsDataURL).toHaveBeenCalledWith(imageFile);
+    mockFileReader.onload?.({
+      target: { result: "data:image/png;base64,..." },
+    });
+    if (lastImageInstance?.onload) {
+      await lastImageInstance.onload();
+    }
+    expect(setDecodedText).toHaveBeenCalledWith("from files");
+  });
+
+  it("should not call processFile on handleFiles when no image in list", () => {
+    vi.mocked(useState)
+      .mockReturnValueOnce(["", setDecodedText])
+      .mockReturnValueOnce(["", setDecodedEncoding])
+      .mockReturnValueOnce(["", setDecodeStatus])
+      .mockReturnValueOnce(["", setCopyStatus]);
+
+    const FileReaderCtor = vi.fn();
+    vi.stubGlobal("FileReader", FileReaderCtor);
+
+    const hook = useQRCodeDecoder();
+    const textFile = { name: "x.txt", type: "text/plain" } as File;
+    hook.handleFiles([textFile]);
+
+    expect(FileReaderCtor).not.toHaveBeenCalled();
+  });
+
+  it("should call processFile on handlePaste when clipboard has image", async () => {
+    vi.mocked(useState)
+      .mockReturnValueOnce(["", setDecodedText])
+      .mockReturnValueOnce(["", setDecodedEncoding])
+      .mockReturnValueOnce(["", setDecodeStatus])
+      .mockReturnValueOnce(["", setCopyStatus]);
+
+    vi.mocked(decoderUtils.decodeQrCode).mockResolvedValue({
+      text: "pasted",
+      encoding: "UTF-8",
+    });
+
+    const mockFileReader: MockFileReader = {
+      readAsDataURL: vi.fn(),
+      onload: null,
+      onerror: null,
+    };
+    vi.stubGlobal(
+      "FileReader",
+      vi.fn().mockImplementation(function (this: unknown) {
+        return mockFileReader;
+      }),
+    );
+
+    const hook = useQRCodeDecoder();
+    const imageFile = { type: "image/png" } as File;
+    const mockEvent = {
+      clipboardData: { files: [imageFile] },
+      preventDefault: vi.fn(),
+    } as unknown as React.ClipboardEvent;
+
+    hook.handlePaste(mockEvent);
+
+    expect(mockEvent.preventDefault).toHaveBeenCalled();
+    expect(mockFileReader.readAsDataURL).toHaveBeenCalledWith(imageFile);
+    mockFileReader.onload?.({
+      target: { result: "data:image/png;base64,..." },
+    });
+    if (lastImageInstance?.onload) {
+      await lastImageInstance.onload();
+    }
+    expect(setDecodedText).toHaveBeenCalledWith("pasted");
+  });
+
+  it("should do nothing on handlePaste when clipboard has no image", () => {
+    vi.mocked(useState)
+      .mockReturnValueOnce(["", setDecodedText])
+      .mockReturnValueOnce(["", setDecodedEncoding])
+      .mockReturnValueOnce(["", setDecodeStatus])
+      .mockReturnValueOnce(["", setCopyStatus]);
+
+    const hook = useQRCodeDecoder();
+    const mockEvent = {
+      clipboardData: { files: [{ type: "text/plain" }] },
+      preventDefault: vi.fn(),
+    } as unknown as React.ClipboardEvent;
+
+    hook.handlePaste(mockEvent);
+
+    expect(mockEvent.preventDefault).not.toHaveBeenCalled();
+  });
+
+  it("should set error when handlePasteFromClipboard and clipboard API unavailable", () => {
+    vi.mocked(useState)
+      .mockReturnValueOnce(["", setDecodedText])
+      .mockReturnValueOnce(["", setDecodedEncoding])
+      .mockReturnValueOnce(["", setDecodeStatus])
+      .mockReturnValueOnce(["", setCopyStatus]);
+
+    vi.stubGlobal("navigator", { clipboard: undefined });
+    vi.stubGlobal("document", { body: { focus: vi.fn() } });
+    vi.stubGlobal("requestAnimationFrame", (cb: () => void) => {
+      cb();
+      return 0;
+    });
+
+    const hook = useQRCodeDecoder();
+    hook.handlePasteFromClipboard();
+
+    expect(setDecodeStatus).toHaveBeenCalledWith(
+      "Error: Clipboard API is not available. Please select or drop an image.",
+    );
+  });
+
+  it("should set status when handlePasteFromClipboard finds no image in clipboard", async () => {
+    vi.mocked(useState)
+      .mockReturnValueOnce(["", setDecodedText])
+      .mockReturnValueOnce(["", setDecodedEncoding])
+      .mockReturnValueOnce(["", setDecodeStatus])
+      .mockReturnValueOnce(["", setCopyStatus]);
+
+    vi.stubGlobal("document", { body: { focus: vi.fn() } });
+    vi.stubGlobal("requestAnimationFrame", (cb: () => void) => {
+      cb();
+      return 0;
+    });
+    vi.stubGlobal("navigator", {
+      clipboard: {
+        read: vi
+          .fn()
+          .mockResolvedValue([{ types: ["text/plain"], getType: vi.fn() }]),
+      },
+    });
+
+    const hook = useQRCodeDecoder();
+    hook.handlePasteFromClipboard();
+
+    await vi.waitFor(() => {
+      expect(setDecodeStatus).toHaveBeenCalledWith("No image in clipboard.");
+    });
+  });
+
+  it("should set error when handlePasteFromClipboard clipboard read is denied", async () => {
+    vi.mocked(useState)
+      .mockReturnValueOnce(["", setDecodedText])
+      .mockReturnValueOnce(["", setDecodedEncoding])
+      .mockReturnValueOnce(["", setDecodeStatus])
+      .mockReturnValueOnce(["", setCopyStatus]);
+
+    const err = new Error("denied");
+    err.name = "NotAllowedError";
+    vi.stubGlobal("document", { body: { focus: vi.fn() } });
+    vi.stubGlobal("requestAnimationFrame", (cb: () => void) => {
+      cb();
+      return 0;
+    });
+    vi.stubGlobal("navigator", {
+      clipboard: { read: vi.fn().mockRejectedValue(err) },
+    });
+
+    const hook = useQRCodeDecoder();
+    hook.handlePasteFromClipboard();
+
+    await vi.waitFor(() => {
+      expect(setDecodeStatus).toHaveBeenCalledWith(
+        "Clipboard access denied. Please allow access when prompted, or select/drop an image.",
+      );
+    });
+  });
+
+  it("should call processFile when handlePasteFromClipboard gets image from clipboard", async () => {
+    vi.mocked(useState)
+      .mockReturnValueOnce(["", setDecodedText])
+      .mockReturnValueOnce(["", setDecodedEncoding])
+      .mockReturnValueOnce(["", setDecodeStatus])
+      .mockReturnValueOnce(["", setCopyStatus]);
+
+    vi.mocked(decoderUtils.decodeQrCode).mockResolvedValue({
+      text: "from clipboard",
+      encoding: "UTF-8",
+    });
+
+    const mockFileReader: MockFileReader = {
+      readAsDataURL: vi.fn(),
+      onload: null,
+      onerror: null,
+    };
+    vi.stubGlobal(
+      "FileReader",
+      vi.fn().mockImplementation(function (this: unknown) {
+        return mockFileReader;
+      }),
+    );
+    vi.stubGlobal("document", { body: { focus: vi.fn() } });
+    vi.stubGlobal("requestAnimationFrame", (cb: () => void) => {
+      cb();
+      return 0;
+    });
+    const imageBlob = new Blob([], { type: "image/png" });
+    vi.stubGlobal("navigator", {
+      clipboard: {
+        read: vi.fn().mockResolvedValue([
+          {
+            types: ["image/png"],
+            getType: vi.fn().mockResolvedValue(imageBlob),
+          },
+        ]),
+      },
+    });
+
+    const hook = useQRCodeDecoder();
+    hook.handlePasteFromClipboard();
+
+    await vi.waitFor(
+      () => {
+        expect(mockFileReader.readAsDataURL).toHaveBeenCalled();
+      },
+      { timeout: 500 },
+    );
+    mockFileReader.onload?.({
+      target: { result: "data:image/png;base64,..." },
+    });
+    if (lastImageInstance?.onload) {
+      await lastImageInstance.onload();
+    }
+    expect(setDecodedText).toHaveBeenCalledWith("from clipboard");
+  });
 });
