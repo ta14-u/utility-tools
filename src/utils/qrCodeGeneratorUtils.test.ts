@@ -7,29 +7,29 @@ import {
 
 describe("qrCodeGeneratorUtils", () => {
   describe("isKanjiModeCompatible", () => {
-    it("returns true for Shift_JIS double-byte text", () => {
+    it("should return true for 2-byte Shift_JIS characters", () => {
       expect(isKanjiModeCompatible("あああ")).toBe(true);
     });
 
-    it("returns true for mixed hiragana and kanji", () => {
+    it("should return true for mixed hiragana and kanji", () => {
       expect(isKanjiModeCompatible("日本語")).toBe(true);
     });
 
-    it("returns false for ASCII text", () => {
+    it("should return false for ASCII characters", () => {
       expect(isKanjiModeCompatible("ABC123")).toBe(false);
     });
 
-    it("returns false for mixed Japanese and ASCII", () => {
+    it("should return false for mixed Japanese and ASCII", () => {
       expect(isKanjiModeCompatible("あいA1")).toBe(false);
     });
 
-    it("returns false for empty string", () => {
+    it("should return false for empty string", () => {
       expect(isKanjiModeCompatible("")).toBe(false);
     });
   });
 
   describe("encodeKanjiQRCode", () => {
-    it("encodes Shift_JIS double-byte text in pure Kanji mode", () => {
+    it("should encode 2-byte Shift_JIS in pure Kanji mode", () => {
       const result = encodeKanjiQRCode("あああ", false);
 
       expect(result).toHaveProperty("matrix");
@@ -38,26 +38,26 @@ describe("qrCodeGeneratorUtils", () => {
       expect(result.size).toBeGreaterThan(0);
     });
 
-    it("encodes Shift_JIS double-byte text with multiple characters", () => {
+    it("should encode 2-byte Shift_JIS with multiple characters", () => {
       const result = encodeKanjiQRCode("あああああ", false);
 
       expect(result).toHaveProperty("matrix");
       expect(result.matrix.length).toBeGreaterThan(0);
     });
 
-    it("throws error for ASCII text in pure Kanji mode", () => {
+    it("should throw error for ASCII characters in pure Kanji mode", () => {
       expect(() => encodeKanjiQRCode("ABC123", false)).toThrow(
         "Text contains characters incompatible with Kanji mode",
       );
     });
 
-    it("throws error for mixed Japanese and ASCII in pure Kanji mode", () => {
+    it("should throw error for mixed Japanese and ASCII in pure Kanji mode", () => {
       expect(() => encodeKanjiQRCode("あいA1", false)).toThrow(
         "Text contains characters incompatible with Kanji mode",
       );
     });
 
-    it("encodes mixed text in mixed mode", () => {
+    it("should encode mixed text in mixed mode", () => {
       const result = encodeKanjiQRCode("aaaaa,\nあああああ", true);
 
       expect(result).toHaveProperty("matrix");
@@ -66,14 +66,14 @@ describe("qrCodeGeneratorUtils", () => {
       expect(result.size).toBeGreaterThan(0);
     });
 
-    it("encodes pure ASCII in mixed mode", () => {
+    it("should encode pure ASCII in mixed mode", () => {
       const result = encodeKanjiQRCode("Hello World", true);
 
       expect(result).toHaveProperty("matrix");
       expect(result.matrix.length).toBeGreaterThan(0);
     });
 
-    it("encodes pure Japanese in mixed mode", () => {
+    it("should encode pure Japanese in mixed mode", () => {
       const result = encodeKanjiQRCode("こんにちは世界", true);
 
       expect(result).toHaveProperty("matrix");
