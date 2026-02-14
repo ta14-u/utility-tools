@@ -14,6 +14,7 @@ pnpm build        # 型チェック(tsc) + 本番ビルド(vite)
 pnpm test         # 全テスト実行 (vitest)
 pnpm lint         # Biome リンター実行
 pnpm format       # Biome フォーマット実行
+pnpm biome:ci     # Biome CI チェック（エラーを警告として扱う）
 pnpm check        # Biome リント + フォーマットチェック
 pnpm preview      # 本番ビルドのプレビュー
 ```
