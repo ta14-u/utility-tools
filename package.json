@@ -9,7 +9,7 @@
     "lint": "biome lint .",
     "format": "biome format --write .",
     "check": "biome check .",
-    "test": "vitest run",
+    "test": "vitest run --coverage",
     "preview": "vite preview"
   },
   "dependencies": {
