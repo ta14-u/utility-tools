@@ -82,16 +82,33 @@ export const skipBits = (bits: BitSource, totalBits: number) => {
   }
 };
 
+/** データを保持するQRセグメントモード名（NUMERIC, ALPHANUMERIC, BYTE, KANJI, HANZI） */
+export type DataSegmentMode =
+  | "NUMERIC"
+  | "ALPHANUMERIC"
+  | "BYTE"
+  | "KANJI"
+  | "HANZI";
+
 /**
- * QRコードの生バイトデータをスキャンして漢字モードの使用を検出する
+ * QRコードの生バイトデータをスキャンして漢字モードの使用とセグメントモード一覧を取得する
  * QRコードのビットストリームをパースし、各セグメントのモードを確認する
  * @param bytes - QRコードの生バイトデータ
  * @param version - QRコードのバージョン情報
- * @returns { hasKanji: 漢字モードが含まれているか, isValid: ビットストリームが有効か, failureReason: 失敗理由（エラー時のみ）}
+ * @returns { hasKanji: 漢字モードが含まれているか, modes: データセグメントのモード名の並び, isValid: ビットストリームが有効か, failureReason: 失敗理由（エラー時のみ）}
  */
-export const scanForKanjiMode = (bytes: Uint8Array, version: Version) => {
+export const scanForKanjiMode = (
+  bytes: Uint8Array,
+  version: Version,
+): {
+  hasKanji: boolean;
+  modes: DataSegmentMode[];
+  isValid: boolean;
+  failureReason: string | null;
+} => {
   const bits = new BitSource(bytes);
   let hasKanji = false;
+  const modes: DataSegmentMode[] = [];
   let isValid = true;
   let failureReason: string | null = null;
   try {
@@ -127,6 +144,7 @@ export const scanForKanjiMode = (bytes: Uint8Array, version: Version) => {
         continue;
       }
       if (mode === Mode.HANZI) {
+        modes.push("HANZI");
         if (bits.available() < 4) {
           isValid = false;
           failureReason = "hanzi subset";
@@ -158,10 +176,13 @@ export const scanForKanjiMode = (bytes: Uint8Array, version: Version) => {
       }
       const count = bits.readBits(countBits);
       if (mode === Mode.NUMERIC) {
+        modes.push("NUMERIC");
         skipNumeric(bits, count);
       } else if (mode === Mode.ALPHANUMERIC) {
+        modes.push("ALPHANUMERIC");
         skipAlphanumeric(bits, count);
       } else if (mode === Mode.BYTE) {
+        modes.push("BYTE");
         const totalBits = 8 * count;
         if (bits.available() < totalBits) {
           isValid = false;
@@ -171,6 +192,7 @@ export const scanForKanjiMode = (bytes: Uint8Array, version: Version) => {
         skipBits(bits, totalBits);
       } else if (mode === Mode.KANJI) {
         hasKanji = true;
+        modes.push("KANJI");
         const totalBits = 13 * count;
         if (bits.available() < totalBits) {
           isValid = false;
@@ -188,5 +210,5 @@ export const scanForKanjiMode = (bytes: Uint8Array, version: Version) => {
     isValid = false;
     failureReason = "exception";
   }
-  return { hasKanji, isValid, failureReason };
+  return { hasKanji, modes, isValid, failureReason };
 };

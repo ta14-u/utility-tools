@@ -1,7 +1,7 @@
 /**
  * QRコードのデコード結果
  * @property text - デコードされたテキスト
- * @property encoding - 検出されたエンコーディング（UTF-8, Shift-JIS, Shift-JIS (Kanji mode), Binary, Unknown）
+ * @property encoding - 検出されたエンコーディング（Alphanumeric mode, Numeric mode, UTF-8, UTF-8 (Byte mode), Shift-JIS, Shift-JIS (Byte mode), Shift-JIS (Kanji mode), Binary, Unknown, Unknown (Byte mode)）
  */
 export type DecodeResult = {
   text: string;
