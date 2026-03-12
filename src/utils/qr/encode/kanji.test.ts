@@ -137,6 +137,19 @@ describe("qr/encode/kanji", () => {
       expect(() => encodeKanjiQRCode("A", false)).toThrow();
     });
 
+    it("should include character position when mixed mode fails with illegal kanji character", () => {
+      const text = `DUMMY
+
+A,1
+
+B,住所２−３
+`;
+
+      expect(() => encodeKanjiQRCode(text, true)).toThrow(
+        'Mixed mode encoding failed at character 18 (line 5, column 6): "−" (U+2212).',
+      );
+    });
+
     it("should handle UTF-8 fallback when not SJIS compatible", () => {
       // 絵文字は if (!isSJISChar) return [new Byte(text)]; をトリガーするはず
       const result = encodeKanjiQRCode("A🌟", true);
