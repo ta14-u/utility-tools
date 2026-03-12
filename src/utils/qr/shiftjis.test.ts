@@ -3,6 +3,7 @@ import Encoding from "encoding-japanese";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  findFirstCharacterPosition,
   isKanjiModeCompatible,
   isShiftJISCompatible,
   segmentText,
@@ -74,6 +75,23 @@ describe("qr/shiftjis", () => {
       vi.spyOn(Encoding, "convert").mockReturnValue([]);
       expect(isShiftJISCompatible("dummy")).toBe(false);
       vi.restoreAllMocks();
+    });
+  });
+
+  describe("findFirstCharacterPosition", () => {
+    it("should return line and column for a matched character", () => {
+      expect(findFirstCharacterPosition("A\nBC−D", "−")).toEqual({
+        utf16Index: 4,
+        characterIndex: 5,
+        line: 2,
+        column: 3,
+        character: "−",
+        codePointHex: "U+2212",
+      });
+    });
+
+    it("should return null when target character does not exist", () => {
+      expect(findFirstCharacterPosition("日本語", "A")).toBeNull();
     });
   });
 

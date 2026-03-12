@@ -1,5 +1,6 @@
 import { Byte, Encoder, Kanji } from "@nuintun/qrcode";
 import {
+  findFirstCharacterPosition,
   isKanjiModeCompatible,
   isShiftJISCompatible,
   segmentText,
@@ -55,7 +56,30 @@ export const encodeKanjiQRCode = (
       // 非漢字のShift_JIS文字（半角カタカナなど）を含む
       // セグメント分割エンコーディングを使用
       const segments = segmentText(text);
-      const qrcode = encoder.encode(...segments);
+      const qrcode = (() => {
+        try {
+          return encoder.encode(...segments);
+        } catch (error) {
+          if (error instanceof Error) {
+            const match = error.message.match(
+              /illegal kanji character:\s(.+)$/i,
+            );
+            if (match?.[1]) {
+              const illegalCharacter = match[1];
+              const position = findFirstCharacterPosition(
+                text,
+                illegalCharacter,
+              );
+              if (position) {
+                throw new Error(
+                  `Mixed mode encoding failed at character ${position.characterIndex} (line ${position.line}, column ${position.column}): "${position.character}" (${position.codePointHex}).`,
+                );
+              }
+            }
+          }
+          throw error;
+        }
+      })();
       const size = qrcode.size;
       return {
         matrix: Array.from({ length: size }, (_, y) =>

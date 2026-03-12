@@ -106,6 +106,68 @@ export const isKanjiModeCompatible = (text: string): boolean => {
   }
 };
 
+export type CharacterPosition = {
+  utf16Index: number;
+  characterIndex: number;
+  line: number;
+  column: number;
+  character: string;
+  codePointHex: string;
+};
+
+const toCodePointHex = (char: string): string => {
+  const codePoint = char.codePointAt(0);
+  if (codePoint === undefined) {
+    return "Unknown";
+  }
+  return `U+${codePoint.toString(16).toUpperCase()}`;
+};
+
+/**
+ * テキスト内の最初の一致文字の位置情報を返す
+ * @param text - 検索対象テキスト
+ * @param target - 位置を調べたい文字
+ * @returns 位置情報。見つからない場合はnull
+ */
+export const findFirstCharacterPosition = (
+  text: string,
+  target: string,
+): CharacterPosition | null => {
+  if (target.length === 0) {
+    return null;
+  }
+
+  let utf16Index = 0;
+  let characterIndex = 0;
+  let line = 1;
+  let column = 1;
+
+  for (const char of text) {
+    characterIndex += 1;
+
+    if (char === target) {
+      return {
+        utf16Index,
+        characterIndex,
+        line,
+        column,
+        character: char,
+        codePointHex: toCodePointHex(char),
+      };
+    }
+
+    utf16Index += char.length;
+    if (char === "\n") {
+      line += 1;
+      column = 1;
+    } else {
+      column += 1;
+    }
+  }
+
+  return null;
+};
+
 /**
  * テキストがShift_JISエンコーディングと互換性があるかチェックする
  * ASCII（0x00-0x7F）、半角カタカナ（0xA1-0xDF）、2バイト文字（0x8140-0x9FFC, 0xE040-0xEFFC）をサポート
